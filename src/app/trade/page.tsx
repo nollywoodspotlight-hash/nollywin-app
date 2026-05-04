@@ -8,8 +8,9 @@ import { supabase } from "@/lib/supabase";
 
 // Protocol Contract Mapping
 const CONTRACTS = {
-  BASE_SEPOLIA: "0xC66A68821F69c5d626797c20189E1B2B085c79e3", // Deployed contract
-  ZORA: "0x0000000000000000000000000000000000000000", // Placeholder for Zora
+  BASE_SEPOLIA: "0xC66A68821F69c5d626797c20189E1B2B085c79e3", //
+  ZORA: "0xc3f3dae9f64ce53bbd63b66954daaa5d2e105c90", // Your Zora Mainnet Contract
+  ZORA_SEPOLIA: "0x0000000000000000000000000000000000000000", // Placeholder for Zora Sepolia
 };
 
 const NOLLYWIN_ABI = [
@@ -29,16 +30,22 @@ export default function TradePage() {
 
   const [amount, setAmount] = useState("");
   const [referrerWallet, setReferrerWallet] = useState<string>(
-    "0x0000000000000000000000000000000000000000",
+    "0x0000000000000000000000000000000000000000", //
   );
 
-  // Logic to determine target network
-  const targetContract =
-    chainId === 7777777 ? CONTRACTS.ZORA : CONTRACTS.BASE_SEPOLIA;
+  // Logic to determine target network (7777777 = Zora, 999999999 = Zora Sepolia)
+  const getTargetContract = () => {
+    if (chainId === 7777777) return CONTRACTS.ZORA;
+    if (chainId === 999999999) return CONTRACTS.ZORA_SEPOLIA;
+    return CONTRACTS.BASE_SEPOLIA;
+  };
+
+  const targetContract = getTargetContract();
 
   useEffect(() => {
     async function getReferralData() {
       if (address) {
+        // Fetching the original recruiter wallet from Supabase
         const { data } = await supabase
           .from("users")
           .select("referrer_original_wallet")
@@ -70,6 +77,12 @@ export default function TradePage() {
     });
   };
 
+  const getNetworkName = () => {
+    if (chainId === 7777777) return "Zora Network";
+    if (chainId === 999999999) return "Zora Sepolia";
+    return "Base Sepolia";
+  };
+
   return (
     <main className="min-h-screen bg-[#050505] text-white pt-32 px-8 flex flex-col items-center">
       <div className="w-full max-w-2xl">
@@ -78,7 +91,7 @@ export default function TradePage() {
             Execute Trade
           </h1>
           <p className="text-zinc-500 text-sm uppercase tracking-[0.2em] font-bold">
-            {chainId === 7777777 ? "Zora Network" : "Base Sepolia"} • Micro-DCA
+            {getNetworkName()} • Micro-DCA
           </p>
         </header>
 
