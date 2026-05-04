@@ -11,7 +11,6 @@ import { coinbaseWallet } from "wagmi/connectors";
 import "@farcaster/auth-kit/styles.css";
 
 const KEY = "O0ipgInYOvzhfsKMFPErgxUtcM9ld3GS";
-// Using the dedicated Alchemy URL to bypass CORS and DNS issues
 const ALCHEMY_OPTIMISM_RPC =
   "https://opt-mainnet.g.alchemy.com/v2/GgSZ3Gsj0Uy7Lvivfu56L";
 
@@ -19,7 +18,7 @@ const config = createConfig({
   chains: [baseSepolia, optimism],
   connectors: [
     coinbaseWallet({
-      appName: "NollyWin", //
+      appName: "NollyWin",
       preference: "smartWalletOnly",
     }),
   ],
@@ -28,17 +27,16 @@ const config = createConfig({
     [baseSepolia.id]: http(
       `https://api.developer.coinbase.com/rpc/v1/base-sepolia/${KEY}`,
     ),
-    // Updated Wagmi transport to use Alchemy for Optimism interaction
     [optimism.id]: http(ALCHEMY_OPTIMISM_RPC),
   },
 });
 
 const farcasterConfig = {
   relay: "https://relay.farcaster.xyz",
-  // Updated Farcaster AuthKit to use Alchemy for SIWE verification
   rpcUrl: ALCHEMY_OPTIMISM_RPC,
-  domain: "localhost:3000",
-  siweUri: "http://localhost:3000/api/auth/farcaster",
+  // FIXED: Pointing to the live production domain for NollyWin
+  domain: "nollywin.xyz",
+  siweUri: "https://nollywin.xyz/api/auth/farcaster",
 };
 
 export function Providers({ children }: { children: ReactNode }) {
