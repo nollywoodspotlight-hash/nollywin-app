@@ -1,6 +1,23 @@
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAccount } from "wagmi";
+import { useProfile } from "@farcaster/auth-kit";
 import AuthSection from "@/components/AuthSection";
 
 export default function Home() {
+  const { isConnected } = useAccount();
+  const { isAuthenticated } = useProfile();
+  const router = useRouter();
+
+  // Watch for successful login and redirect to the dashboard
+  useEffect(() => {
+    if (isConnected || isAuthenticated) {
+      router.push("/dashboard");
+    }
+  }, [isConnected, isAuthenticated, router]);
+
   return (
     <main className="relative min-h-screen w-full flex items-center justify-center bg-[#050505] overflow-hidden">
       {/* Background Ambience */}
