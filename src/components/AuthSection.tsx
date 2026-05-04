@@ -20,7 +20,6 @@ import { useReferralSignature } from "@/hooks/useReferralSignature";
 export default function AuthSection() {
   const { createSignature } = useReferralSignature();
 
-  // Debugging: Checks if the browser can resolve the Alchemy DNS on load
   useEffect(() => {
     const checkRPC = async () => {
       try {
@@ -50,14 +49,10 @@ export default function AuthSection() {
 
   const handleFarcasterSuccess = async (res: any) => {
     console.log("Farcaster Linked successfully:", res);
-
     try {
-      // Logic for securing the referral signature for the protocol
       const signature = await createSignature(12345);
-
       if (signature) {
         console.log("Referral Signature secured:", signature);
-        alert(`Linked as @${res.username}. Referral signature generated!`);
       }
     } catch (err) {
       console.error("Signature process interrupted:", err);
@@ -76,27 +71,29 @@ export default function AuthSection() {
       </div>
 
       <div className="space-y-6">
-        {/* Step 1: Wallet Connection (OnchainKit) */}
         <div className="space-y-3">
           <p className="text-[10px] font-bold text-blue-500 uppercase tracking-widest ml-1">
             01. Connect Base Wallet
           </p>
+          {/* 
+              FIX: Wallet uses the OnchainKit dropdown. 
+              Ensure you click the button AFTER connecting to see 'Disconnect'.
+          */}
           <Wallet>
             <ConnectWallet className="w-full bg-blue-600 hover:bg-blue-500 text-white rounded-xl py-7 shadow-lg shadow-blue-900/20 transition-all border-none font-bold">
               <Avatar className="h-6 w-6" />
               <Name />
             </ConnectWallet>
-            <WalletDropdown>
+            <WalletDropdown className="z-50 bg-zinc-900 border border-zinc-800">
               <Identity className="px-4 pt-3 pb-2" hasCopyAddressOnClick>
-                <Address />
-                <EthBalance />
+                <Address className="text-white" />
+                <EthBalance className="text-zinc-400" />
               </Identity>
-              <WalletDropdownDisconnect />
+              <WalletDropdownDisconnect className="hover:bg-red-500/10 text-red-500 font-bold" />
             </WalletDropdown>
           </Wallet>
         </div>
 
-        {/* Step 2: Farcaster Link (Auth-Kit) */}
         <div className="space-y-3">
           <p className="text-[10px] font-bold text-purple-500 uppercase tracking-widest ml-1">
             02. Link Farcaster Profile
