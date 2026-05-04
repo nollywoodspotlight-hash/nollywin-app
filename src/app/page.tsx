@@ -11,7 +11,7 @@ export default function Home() {
   const { isAuthenticated } = useProfile();
   const router = useRouter();
 
-  // Watch for successful login and redirect to the dashboard
+  // Automatically redirects to the dashboard once the user logs in
   useEffect(() => {
     if (isConnected || isAuthenticated) {
       router.push("/dashboard");
