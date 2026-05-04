@@ -1,0 +1,33 @@
+@import "tailwindcss";
+
+:root {
+  --background: 10, 10, 10;
+  --foreground: 255, 255, 255;
+}
+
+body {
+  /* We use a very dark base so the galaxy image blends into it */
+  background-color: #0a0a0a;
+  color: white;
+  margin: 0;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Ensure the main container doesn't block the background layer */
+main {
+  background: transparent;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0a0a0a;
+}
+::-webkit-scrollbar-thumb {
+  background: #ffd700;
+  border-radius: 10px;
+}
