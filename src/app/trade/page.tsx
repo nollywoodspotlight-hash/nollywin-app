@@ -1,13 +1,74 @@
 "use client";
 
-import { useState } from "react";
-import { useAccount } from "wagmi";
+import { useState, useEffect } from "react";
+import { useAccount, useWriteContract } from "wagmi";
 import { useProfile } from "@farcaster/auth-kit";
+import { parseEther } from "viem";
+import { supabase } from "@/lib/supabase";
+
+// Protocol Contract Mapping
+const CONTRACTS = {
+  BASE_SEPOLIA: "0xC66A68821F69c5d626797c20189E1B2B085c79e3", // Deployed contract
+  ZORA: "0x0000000000000000000000000000000000000000", // Placeholder for Zora
+};
+
+const NOLLYWIN_ABI = [
+  {
+    inputs: [{ internalType: "address", name: "_referrer", type: "address" }],
+    name: "createStrategy",
+    outputs: [],
+    stateMutability: "payable",
+    type: "function",
+  },
+] as const;
 
 export default function TradePage() {
-  const { isConnected, address } = useAccount();
+  const { isConnected, address, chainId } = useAccount();
   const { isAuthenticated, profile } = useProfile();
+  const { writeContract, isPending, isSuccess } = useWriteContract();
+
   const [amount, setAmount] = useState("");
+  const [referrerWallet, setReferrerWallet] = useState<string>(
+    "0x0000000000000000000000000000000000000000",
+  );
+
+  // Logic to determine target network
+  const targetContract =
+    chainId === 7777777 ? CONTRACTS.ZORA : CONTRACTS.BASE_SEPOLIA;
+
+  useEffect(() => {
+    async function getReferralData() {
+      if (address) {
+        const { data } = await supabase
+          .from("users")
+          .select("referrer_original_wallet")
+          .eq("user_wallet", address.toLowerCase())
+          .single();
+
+        if (data?.referrer_original_wallet) {
+          setReferrerWallet(data.referrer_original_wallet);
+        }
+      }
+    }
+    getReferralData();
+  }, [address]);
+
+  const handleInitialize = () => {
+    if (
+      !amount ||
+      !isConnected ||
+      targetContract === "0x0000000000000000000000000000000000000000"
+    )
+      return;
+
+    writeContract({
+      address: targetContract as `0x${string}`,
+      abi: NOLLYWIN_ABI,
+      functionName: "createStrategy",
+      args: [referrerWallet as `0x${string}`],
+      value: parseEther(amount),
+    });
+  };
 
   return (
     <main className="min-h-screen bg-[#050505] text-white pt-32 px-8 flex flex-col items-center">
@@ -16,37 +77,31 @@ export default function TradePage() {
           <h1 className="text-4xl font-black italic tracking-tighter mb-2 uppercase">
             Execute Trade
           </h1>
-          <p className="text-zinc-500 text-sm uppercase tracking-[0.2em]">
-            NollyWin Micro-DCA • Base Network
+          <p className="text-zinc-500 text-sm uppercase tracking-[0.2em] font-bold">
+            {chainId === 7777777 ? "Zora Network" : "Base Sepolia"} • Micro-DCA
           </p>
         </header>
 
         {!isConnected ? (
-          <div className="p-12 border border-dashed border-zinc-800 rounded-3xl text-center bg-zinc-900/20">
-            <p className="text-zinc-400 font-medium">
-              Please connect your Base wallet to access the trading terminal.
-            </p>
+          <div className="p-12 border border-dashed border-zinc-800 rounded-3xl text-center bg-zinc-900/20 uppercase tracking-widest text-[10px] font-bold text-zinc-500">
+            Authentication Required
           </div>
         ) : (
           <div className="grid gap-6">
-            {/* Status Bar */}
             <div className="flex justify-between items-center px-2">
               <div className="flex items-center gap-2">
                 <div
                   className={`w-2 h-2 rounded-full ${isAuthenticated ? "bg-purple-500" : "bg-zinc-700"}`}
                 />
                 <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
-                  {isAuthenticated
-                    ? `@${profile?.username} Linked`
-                    : "Farcaster Not Linked"}
+                  {isAuthenticated ? `@${profile?.username}` : "FC Not Linked"}
                 </span>
               </div>
               <span className="text-[10px] font-bold text-blue-500 uppercase tracking-widest">
-                Base: {address?.slice(0, 6)}...{address?.slice(-4)}
+                {address?.slice(0, 6)}...{address?.slice(-4)}
               </span>
             </div>
 
-            {/* Strategy Input Card */}
             <div className="bg-zinc-900/50 border border-zinc-800 p-8 rounded-3xl backdrop-blur-md">
               <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-4">
                 01. Set Strategy Principal (ETH)
@@ -56,42 +111,38 @@ export default function TradePage() {
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="0.01"
-                className="w-full bg-black border border-zinc-800 rounded-2xl p-6 text-3xl font-mono focus:border-blue-600 focus:ring-1 focus:ring-blue-600 outline-none transition-all mb-6"
+                className="w-full bg-black border border-zinc-800 rounded-2xl p-6 text-3xl font-mono focus:border-blue-600 outline-none transition-all mb-6 text-white"
               />
-
-              <div className="space-y-3 pt-4 border-t border-zinc-800/50">
-                <div className="flex justify-between items-center">
-                  <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
-                    Principal Shield
-                  </span>
-                  <span className="text-[10px] font-bold text-green-500 uppercase">
-                    Active
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
-                    Protocol Fee
-                  </span>
-                  <span className="text-[10px] font-bold text-white uppercase">
-                    Profit-Only
-                  </span>
-                </div>
+              <div className="flex justify-between items-center pt-4 border-t border-zinc-800/50">
+                <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
+                  Reward Recipient
+                </span>
+                <span className="text-[10px] font-bold text-white uppercase font-mono">
+                  {referrerWallet !==
+                  "0x0000000000000000000000000000000000000000"
+                    ? `${referrerWallet.slice(0, 6)}...`
+                    : "Standard Fee"}
+                </span>
               </div>
             </div>
 
-            {/* Action Button */}
             <button
-              disabled={!amount}
-              className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-800 disabled:text-zinc-500 py-6 rounded-2xl font-black italic tracking-tighter text-xl transition-all shadow-xl shadow-blue-900/10 active:scale-[0.98]"
+              onClick={handleInitialize}
+              disabled={
+                !amount ||
+                isPending ||
+                targetContract === "0x0000000000000000000000000000000000000000"
+              }
+              className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-800 py-6 rounded-2xl font-black italic tracking-tighter text-xl transition-all uppercase"
             >
-              INITIALIZE DCA STRATEGY
+              {isPending ? "Confirming..." : "Initialize DCA Strategy"}
             </button>
 
-            <p className="text-[9px] text-zinc-600 text-center leading-relaxed px-12">
-              By initializing, you authorize the self-custodial vault to execute
-              trades based on your strategy. Fees are only deducted from
-              realized profits.
-            </p>
+            {isSuccess && (
+              <p className="text-green-500 text-[10px] font-bold text-center uppercase tracking-widest animate-pulse">
+                Strategy Live
+              </p>
+            )}
           </div>
         )}
       </div>
