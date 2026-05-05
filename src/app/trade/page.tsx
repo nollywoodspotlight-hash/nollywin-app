@@ -6,17 +6,18 @@ import {
   useWriteContract,
   useSwitchChain,
   useConnect,
-} from "wagmi"; // Added useConnect
+  useDisconnect,
+} from "wagmi";
 import { useProfile } from "@farcaster/auth-kit";
 import { parseEther } from "viem";
 import { base, zora } from "wagmi/chains";
 import { supabase } from "@/lib/supabase";
 
-// Protocol Contract Mapping for Mainnet
+// Updated with your confirmed Zora Production Address
 const CONTRACTS = {
-  BASE: "0x0000000000000000000000000000000000000000", // UPDATE with your Base Mainnet address
-  ZORA: "0xc3f3dae9f64ce53bbd63b66954daaa5d2e105c90", // Your Zora Mainnet address
-};
+  BASE: "0x0000000000000000000000000000000000000000", // Update this when you deploy to Base Mainnet
+  ZORA: "0xc3f3dae9f64ce53bbd63b66954daaa5d2e105c90",
+} as const;
 
 const NOLLYWIN_ABI = [
   {
@@ -29,49 +30,51 @@ const NOLLYWIN_ABI = [
 ] as const;
 
 export default function TradePage() {
-  const { isConnected, address, chainId } = useAccount();
-  const { switchChain } = useSwitchChain();
-  const { connect, connectors } = useConnect(); // Connect hook for Zora login
+  const { isConnected, address, chain } = useAccount();
+  const { switchChain, isPending: isSwitching } = useSwitchChain();
+  const { connect, connectors } = useConnect();
+  const { disconnect } = useDisconnect();
+
   const { isAuthenticated, profile } = useProfile();
-  const { writeContract, isPending, isSuccess } = useWriteContract();
+  const { writeContract, isPending, isSuccess, error } = useWriteContract();
 
   const [amount, setAmount] = useState("");
   const [referrerWallet, setReferrerWallet] = useState<string>(
     "0x0000000000000000000000000000000000000000",
   );
 
-  // Logic to handle the specific Zora login button
+  // This login specifically hunts for MetaMask/Rainbow to avoid Coinbase defaults
   const loginWithZora = () => {
-    // Priority: Browser extensions (MetaMask/Rainbow) -> Fallback to Coinbase
-    const connector =
-      connectors.find((c) => c.id === "injected") || connectors[0];
+    const preferredConnector =
+      connectors.find((c) => c.id === "injected" || c.type === "injected") ||
+      connectors[0];
 
-    connect({
-      connector,
-      chainId: zora.id,
-    });
+    if (preferredConnector) {
+      connect({
+        connector: preferredConnector,
+        chainId: zora.id,
+      });
+    }
   };
 
-  const getTargetContract = () => {
-    if (chainId === zora.id) return CONTRACTS.ZORA;
-    if (chainId === base.id) return CONTRACTS.BASE;
-    return null;
-  };
-
-  const targetContract = getTargetContract();
+  const targetContract =
+    chain?.id === zora.id
+      ? CONTRACTS.ZORA
+      : chain?.id === base.id
+        ? CONTRACTS.BASE
+        : null;
 
   useEffect(() => {
     async function getReferralData() {
-      if (address) {
-        const { data } = await supabase
-          .from("users")
-          .select("referrer_original_wallet")
-          .eq("user_wallet", address.toLowerCase())
-          .single();
+      if (!address) return;
+      const { data } = await supabase
+        .from("users")
+        .select("referrer_original_wallet")
+        .eq("user_wallet", address.toLowerCase())
+        .single();
 
-        if (data?.referrer_original_wallet) {
-          setReferrerWallet(data.referrer_original_wallet);
-        }
+      if (data?.referrer_original_wallet) {
+        setReferrerWallet(data.referrer_original_wallet);
       }
     }
     getReferralData();
@@ -103,22 +106,40 @@ export default function TradePage() {
             Live Terminal
           </h1>
           <p className="text-zinc-500 text-sm uppercase tracking-[0.2em] font-bold">
-            Real Asset Execution • {chainId === zora.id ? "Zora" : "Base"}
+            Real Asset Execution • {chain?.name || "Select Network"}
           </p>
         </header>
 
-        {/* Network Toggle */}
+        {isConnected &&
+          chain &&
+          chain.id !== base.id &&
+          chain.id !== zora.id && (
+            <div className="mb-6 p-4 bg-red-500/10 border border-red-500 rounded-2xl text-red-400 text-[10px] uppercase font-bold tracking-widest text-center">
+              Unsupported Network: Please switch to Base or Zora
+            </div>
+          )}
+
         {isConnected && (
           <div className="flex gap-4 mb-8 justify-center">
             <button
-              onClick={() => switchChain({ chainId: base.id })}
-              className={`px-6 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-all ${chainId === base.id ? "bg-blue-600 border-blue-600" : "border-zinc-800 hover:border-zinc-500"}`}
+              onClick={() => switchChain?.({ chainId: base.id })}
+              disabled={isSwitching}
+              className={`px-6 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-all ${
+                chain?.id === base.id
+                  ? "bg-blue-600 border-blue-600"
+                  : "border-zinc-800 hover:border-zinc-500"
+              }`}
             >
               Base Mainnet
             </button>
             <button
-              onClick={() => switchChain({ chainId: zora.id })}
-              className={`px-6 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-all ${chainId === zora.id ? "bg-purple-600 border-purple-600" : "border-zinc-800 hover:border-zinc-500"}`}
+              onClick={() => switchChain?.({ chainId: zora.id })}
+              disabled={isSwitching}
+              className={`px-6 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-all ${
+                chain?.id === zora.id
+                  ? "bg-purple-600 border-purple-600"
+                  : "border-zinc-800 hover:border-zinc-500"
+              }`}
             >
               Zora Mainnet
             </button>
@@ -127,7 +148,6 @@ export default function TradePage() {
 
         {!isConnected ? (
           <div className="flex flex-col gap-6 w-full">
-            {/* Dedicated Zora Login Button */}
             <button
               onClick={loginWithZora}
               className="w-full bg-purple-600 hover:bg-purple-500 py-8 rounded-3xl font-black italic tracking-tighter text-2xl transition-all uppercase flex flex-col items-center justify-center gap-2 group"
@@ -139,26 +159,27 @@ export default function TradePage() {
                 <span>Login with Zora Wallet</span>
               </div>
               <span className="text-[9px] font-bold tracking-[0.3em] opacity-60">
-                Optimized for MetaMask & Rainbow
+                MetaMask • Rainbow • WalletConnect
               </span>
             </button>
 
             <div className="relative flex py-5 items-center">
               <div className="flex-grow border-t border-zinc-800"></div>
               <span className="flex-shrink mx-4 text-zinc-600 text-[10px] font-bold uppercase tracking-widest">
-                or use coinbase
+                or
               </span>
               <div className="flex-grow border-t border-zinc-800"></div>
             </div>
 
-            {/* Standard OnchainKit Placeholder - This would be where your existing Wallet Components go */}
-            <div className="p-4 border border-zinc-800 rounded-2xl bg-zinc-900/10 text-center text-[10px] text-zinc-500 uppercase font-bold tracking-widest">
-              Standard Smart Wallet Login
-            </div>
+            <button
+              onClick={() => connect({ connector: connectors[0] })}
+              className="p-4 border border-zinc-800 rounded-2xl bg-zinc-900/10 text-center text-[10px] text-zinc-500 uppercase font-bold tracking-widest hover:border-zinc-600 transition-colors"
+            >
+              Use Other Wallet (Coinbase, etc.)
+            </button>
           </div>
         ) : (
           <div className="grid gap-6">
-            {/* Identity Banner */}
             <div className="flex justify-between items-center px-2">
               <div className="flex items-center gap-2">
                 <div
@@ -168,12 +189,14 @@ export default function TradePage() {
                   {isAuthenticated ? `@${profile?.username}` : "FC Not Linked"}
                 </span>
               </div>
-              <span className="text-[10px] font-bold text-blue-500 uppercase tracking-widest">
-                {address?.slice(0, 6)}...{address?.slice(-4)}
-              </span>
+              <button
+                onClick={() => disconnect()}
+                className="text-[10px] font-bold text-red-500/50 hover:text-red-500 uppercase tracking-widest"
+              >
+                Disconnect {address?.slice(0, 4)}...
+              </button>
             </div>
 
-            {/* Input Section */}
             <div className="bg-zinc-900/50 border border-zinc-800 p-8 rounded-3xl backdrop-blur-md">
               <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-4">
                 01. Strategy Principal (REAL ETH)
@@ -198,7 +221,6 @@ export default function TradePage() {
               </div>
             </div>
 
-            {/* Execution Button */}
             <button
               onClick={handleInitialize}
               disabled={
@@ -207,16 +229,29 @@ export default function TradePage() {
                 !targetContract ||
                 targetContract === "0x0000000000000000000000000000000000000000"
               }
-              className={`w-full py-6 rounded-2xl font-black italic tracking-tighter text-xl transition-all uppercase ${chainId === zora.id ? "bg-purple-600 hover:bg-purple-500" : "bg-blue-600 hover:bg-blue-500"} disabled:bg-zinc-800`}
+              className={`w-full py-6 rounded-2xl font-black italic tracking-tighter text-xl transition-all uppercase ${
+                chain?.id === zora.id
+                  ? "bg-purple-600 hover:bg-purple-500"
+                  : "bg-blue-600 hover:bg-blue-500"
+              } disabled:bg-zinc-800 disabled:cursor-not-allowed`}
             >
               {isPending
                 ? "Transacting..."
-                : `Deploy ${chainId === zora.id ? "Zora" : "Base"} Strategy`}
+                : `Deploy ${chain?.id === zora.id ? "Zora" : "Base"} Strategy`}
             </button>
+
+            {error && (
+              <p className="text-red-400 text-[10px] uppercase font-bold text-center tracking-widest">
+                Error:{" "}
+                {error.message.includes("user rejected")
+                  ? "User Rejected Transaction"
+                  : "Execution Failed"}
+              </p>
+            )}
 
             {isSuccess && (
               <p className="text-green-500 text-[10px] font-bold text-center uppercase tracking-widest animate-pulse">
-                Strategy Executed on {chainId === zora.id ? "Zora" : "Base"}
+                Strategy Successfully Executed on {chain?.name}
               </p>
             )}
           </div>
