@@ -31,6 +31,9 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} min-h-screen flex flex-col bg-black text-white relative`}
       >
         <Providers>
+          {/* 1. Added LiveTicker here - it will appear at the very top */}
+          <LiveTicker />
+
           {/* Background Layer */}
           <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
             <div
@@ -43,13 +46,11 @@ export default function RootLayout({
                   "radial-gradient(circle at center, black 20%, transparent 80%)",
               }}
             />
-            {/* Dark overlay to ensure text readability */}
             <div className="absolute inset-0 bg-black/60" />
           </div>
 
           <Navbar />
 
-          {/* Expanded main container (max-w-7xl) for Dashboard space */}
           <main className="flex-grow max-w-7xl mx-auto w-full px-6 py-8 z-10 relative">
             {children}
           </main>
