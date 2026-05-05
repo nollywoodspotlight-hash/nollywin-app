@@ -3,48 +3,39 @@
 import { OnchainKitProvider } from "@coinbase/onchainkit";
 import { AuthKitProvider } from "@farcaster/auth-kit";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useState, type ReactNode } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import { WagmiProvider, createConfig, http, useAccount } from "wagmi";
-import { base, zora, optimism, baseSepolia } from "wagmi/chains";
+import { base, zora } from "wagmi/chains";
 import { coinbaseWallet, injected } from "wagmi/connectors";
 
 import "@farcaster/auth-kit/styles.css";
 
 const KEY = "O0ipgInYOvzhfsKMFPErgxUtcM9ld3GS";
-const ALCHEMY_OPTIMISM_RPC =
-  "https://opt-mainnet.g.alchemy.com/v2/GgSZ3Gsj0Uy7Lvivfu56L";
-const ALCHEMY_ZORA_RPC =
-  "https://zora-mainnet.g.alchemy.com/v2/GgSZ3Gsj0Uy7Lvivfu56L";
 
 const config = createConfig({
-  chains: [base, zora, optimism, baseSepolia],
+  chains: [base, zora],
   connectors: [
-    coinbaseWallet({
-      appName: "NollyWin",
-      preference: "all",
-    }),
-    injected(),
+    injected(), // MOVE THIS TO THE TOP to prioritize MetaMask/Rainbow
+    coinbaseWallet({ appName: "NollyWin", preference: "all" }),
   ],
   ssr: true,
   transports: {
     [base.id]: http(),
-    [zora.id]: http(ALCHEMY_ZORA_RPC),
-    [optimism.id]: http(ALCHEMY_OPTIMISM_RPC),
-    [baseSepolia.id]: http(
-      `https://api.developer.coinbase.com/rpc/v1/base-sepolia/${KEY}`,
+    [zora.id]: http(
+      "https://zora-mainnet.g.alchemy.com/v2/GgSZ3Gsj0Uy7Lvivfu56L",
     ),
   },
 });
 
-const farcasterConfig = {
-  relay: "https://relay.farcaster.xyz",
-  rpcUrl: ALCHEMY_OPTIMISM_RPC,
-  domain: "nollywin.xyz",
-  siweUri: "https://nollywin.xyz/api/auth/farcaster",
-};
-
 export function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null; // Prevents the app from "guessing" the chain before the wallet is ready
 
   return (
     <WagmiProvider config={config}>
@@ -60,13 +51,18 @@ function OnchainKitWrapper({ children }: { children: ReactNode }) {
 
   return (
     <OnchainKitProvider
-      // The 'key' prop is the secret weapon here.
-      // It forces OnchainKit to reset entirely when the chain changes.
-      key={chain?.id || base.id}
+      key={chain?.id || "init"} // Forces total reset on chain change
       chain={chain || base}
       apiKey={KEY}
     >
-      <AuthKitProvider config={farcasterConfig}>{children}</AuthKitProvider>
+      <AuthKitProvider
+        config={{
+          relay: "https://relay.farcaster.xyz",
+          domain: "nollywin.xyz",
+        }}
+      >
+        {children}
+      </AuthKitProvider>
     </OnchainKitProvider>
   );
 }
