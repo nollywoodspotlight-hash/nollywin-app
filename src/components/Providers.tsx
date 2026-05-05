@@ -4,9 +4,9 @@ import { OnchainKitProvider } from "@coinbase/onchainkit";
 import { AuthKitProvider } from "@farcaster/auth-kit";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
-import { WagmiProvider, createConfig, http } from "wagmi";
-import { baseSepolia, optimism, zora, zoraSepolia } from "wagmi/chains";
-import { coinbaseWallet, injected } from "wagmi/connectors"; // Added injected
+import { WagmiProvider, createConfig, http, useAccount } from "wagmi";
+import { base, zora, optimism, baseSepolia } from "wagmi/chains";
+import { coinbaseWallet, injected } from "wagmi/connectors";
 
 import "@farcaster/auth-kit/styles.css";
 
@@ -15,28 +15,24 @@ const ALCHEMY_OPTIMISM_RPC =
   "https://opt-mainnet.g.alchemy.com/v2/GgSZ3Gsj0Uy7Lvivfu56L";
 const ALCHEMY_ZORA_RPC =
   "https://zora-mainnet.g.alchemy.com/v2/GgSZ3Gsj0Uy7Lvivfu56L";
-const ALCHEMY_ZORA_SEPOLIA_RPC =
-  "https://zora-sepolia.g.alchemy.com/v2/GgSZ3Gsj0Uy7Lvivfu56L";
 
 const config = createConfig({
-  chains: [baseSepolia, optimism, zora, zoraSepolia],
+  chains: [base, zora, optimism, baseSepolia],
   connectors: [
-    // coinbaseWallet with preference "all" allows the user to choose
     coinbaseWallet({
       appName: "NollyWin",
       preference: "all",
     }),
-    // injected() is essential for Zora support via Browser extensions
-    injected(),
+    injected(), // Allows MetaMask/Rainbow to connect to Zora
   ],
   ssr: true,
   transports: {
+    [base.id]: http(),
+    [zora.id]: http(ALCHEMY_ZORA_RPC),
+    [optimism.id]: http(ALCHEMY_OPTIMISM_RPC),
     [baseSepolia.id]: http(
       `https://api.developer.coinbase.com/rpc/v1/base-sepolia/${KEY}`,
     ),
-    [optimism.id]: http(ALCHEMY_OPTIMISM_RPC),
-    [zora.id]: http(ALCHEMY_ZORA_RPC),
-    [zoraSepolia.id]: http(ALCHEMY_ZORA_SEPOLIA_RPC),
   },
 });
 
@@ -53,18 +49,32 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
-        <OnchainKitProvider
-          chain={baseSepolia}
-          apiKey={KEY}
-          config={{
-            appearance: {
-              mode: "auto",
-            },
-          }}
-        >
-          <AuthKitProvider config={farcasterConfig}>{children}</AuthKitProvider>
-        </OnchainKitProvider>
+        <OnchainKitWrapper KEY={KEY} farcasterConfig={farcasterConfig}>
+          {children}
+        </OnchainKitWrapper>
       </QueryClientProvider>
     </WagmiProvider>
+  );
+}
+
+// Sub-component to access useAccount within the WagmiProvider context
+function OnchainKitWrapper({
+  children,
+  KEY,
+  farcasterConfig,
+}: {
+  children: ReactNode;
+  KEY: string;
+  farcasterConfig: any;
+}) {
+  const { chain } = useAccount();
+
+  return (
+    <OnchainKitProvider
+      chain={chain || base} // Follows your wallet's chain instead of forcing Base
+      apiKey={KEY}
+    >
+      <AuthKitProvider config={farcasterConfig}>{children}</AuthKitProvider>
+    </OnchainKitProvider>
   );
 }
