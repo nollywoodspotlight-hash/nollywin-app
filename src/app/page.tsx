@@ -2,20 +2,19 @@
 
 import React from "react";
 import { useRouter } from "next/navigation";
-import { SignInButton } from "@farcaster/auth-kit"; // Real Farcaster Auth
-import "@farcaster/auth-kit/styles.css"; // Ensure styles are loaded
-// import { WalletDefault } from "@coinbase/onchainkit/wallet"; // For Base Wallet
+import { SignInButton } from "@farcaster/auth-kit";
+import "@farcaster/auth-kit/styles.css";
 
 export default function HomePage() {
   const router = useRouter();
 
+  // Redirects the user to the dashboard upon successful login
   const handleSuccess = () => {
-    // Smooth transition to the trading floor
     router.push("/dashboard");
   };
 
   return (
-    <div className="flex flex-col items-center pt-10 md:pt-20 pb-20">
+    <div className="flex flex-col items-center pt-10 md:pt-20 pb-32">
       {/* 1. HERO SECTION */}
       <div className="text-center space-y-6 max-w-4xl px-4">
         <h2 className="text-[#b87209] text-xs font-black uppercase tracking-[0.4em] animate-pulse">
@@ -39,7 +38,7 @@ export default function HomePage() {
 
       {/* 2. DUAL AUTH PORTAL */}
       <div className="mt-16 w-full max-w-sm bg-black/40 border border-[#b87209]/20 p-8 rounded-sm backdrop-blur-md shadow-2xl relative">
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#b87209] text-black text-[9px] font-black px-4 py-1 uppercase tracking-widest">
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#b87209] text-black text-[9px] font-black px-4 py-1 uppercase tracking-widest whitespace-nowrap">
           Executive Access
         </div>
 
@@ -47,10 +46,9 @@ export default function HomePage() {
           {/* Base Wallet Integration */}
           <button
             onClick={handleSuccess}
-            className="w-full bg-white text-black font-black py-4 uppercase tracking-tighter flex items-center justify-center space-x-3 hover:bg-gray-200 transition-all shadow-lg"
+            className="w-full bg-white text-black font-black py-4 uppercase tracking-tighter flex items-center justify-center space-x-3 hover:bg-gray-200 transition-all shadow-lg group"
           >
-            <div className="w-5 h-5 bg-blue-600 rounded-full" />{" "}
-            {/* Placeholder Logo */}
+            <div className="w-5 h-5 bg-[#0052FF] rounded-full group-hover:scale-110 transition-transform" />
             <span>Connect Base Wallet</span>
           </button>
 
@@ -63,50 +61,66 @@ export default function HomePage() {
           </div>
 
           {/* Farcaster Auth Kit Button */}
-          <div className="farcaster-button-wrapper hover:scale-[1.02] transition-transform">
+          <div className="farcaster-button-wrapper hover:scale-[1.02] transition-transform flex justify-center">
             <SignInButton onSuccess={handleSuccess} />
-            {/* Note: The button is styled via @farcaster/auth-kit internally */}
           </div>
         </div>
       </div>
 
-      {/* 3. THE 45-SECOND VISUAL GUIDE */}
-      <div className="mt-32 w-full max-w-6xl px-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-12 border-t border-white/5 pt-16">
-          <div className="group space-y-4">
+      {/* 3. THE 45-SECOND PRODUCTION GUIDE */}
+      <div className="mt-40 w-full max-w-6xl px-6 border-t border-white/5 pt-20">
+        {/* Cinematic Header */}
+        <div className="mb-16 text-center md:text-left">
+          <h2 className="text-[#b87209] text-[10px] font-black uppercase tracking-[0.4em] mb-4">
+            Production Protocol
+          </h2>
+          <h3 className="text-4xl md:text-5xl font-black uppercase italic tracking-tighter text-white leading-tight">
+            From Script to <span className="text-[#b87209]">Settlement</span>{" "}
+            <br />
+            <span className="text-sm font-bold tracking-[0.1em] text-gray-500 normal-case not-italic block mt-2">
+              Your 45-Second Guide to the NollyWin Engine
+            </span>
+          </h3>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {/* Step 01 */}
+          <div className="group space-y-4 p-8 bg-[#1d02cb]/5 border border-white/5 hover:border-[#b87209]/30 transition-all rounded-sm">
             <div className="text-4xl font-black italic text-[#b87209]/20 group-hover:text-[#b87209] transition-colors">
               01
             </div>
             <h3 className="text-white font-bold uppercase tracking-[0.2em] text-sm">
               Cast Your Wallet
             </h3>
-            <p className="text-gray-500 text-xs leading-relaxed font-medium">
+            <p className="text-gray-400 text-xs leading-relaxed font-medium">
               Connect your Base wallet or Farcaster ID. This is your producer’s
               pass to the NollyWin trading engine.
             </p>
           </div>
 
-          <div className="group space-y-4">
+          {/* Step 02 */}
+          <div className="group space-y-4 p-8 bg-[#1d02cb]/5 border border-white/5 hover:border-[#b87209]/30 transition-all rounded-sm">
             <div className="text-4xl font-black italic text-[#b87209]/20 group-hover:text-[#b87209] transition-colors">
               02
             </div>
             <h3 className="text-white font-bold uppercase tracking-[0.2em] text-sm">
               Set the Script
             </h3>
-            <p className="text-gray-500 text-xs leading-relaxed font-medium">
+            <p className="text-gray-400 text-xs leading-relaxed font-medium">
               Pick a trading genre—from "High Action" meme coins to "Steady
               Drama" stablecoins. Your agent executes while you sleep.
             </p>
           </div>
 
-          <div className="group space-y-4">
+          {/* Step 03 */}
+          <div className="group space-y-4 p-8 bg-[#1d02cb]/5 border border-white/5 hover:border-[#b87209]/30 transition-all rounded-sm">
             <div className="text-4xl font-black italic text-[#b87209]/20 group-hover:text-[#b87209] transition-colors">
               03
             </div>
             <h3 className="text-white font-bold uppercase tracking-[0.2em] text-sm">
               Take Your Royalties
             </h3>
-            <p className="text-gray-500 text-xs leading-relaxed font-medium">
+            <p className="text-gray-400 text-xs leading-relaxed font-medium">
               Watch your box office results in real-time. Profits settle
               directly to your self-custodial wallet on Base.
             </p>
