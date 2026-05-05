@@ -7,23 +7,22 @@ import { usePathname } from "next/navigation";
 export function Navbar() {
   const pathname = usePathname();
 
-  // Helper function to highlight the active page
   const isActive = (path: string) => pathname === path;
 
   return (
-    <nav className="sticky top-0 z-50 w-full border-b border-white/5 bg-black/60 backdrop-blur-md">
+    <nav className="sticky top-0 z-50 w-full border-b border-white/5 bg-[#1d02cb]/10 backdrop-blur-md">
       <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-        {/* Logo Section */}
+        {/* Logo Section - Now using the Blue and Gold theme */}
         <Link href="/" className="group flex items-center space-x-3">
-          <div className="w-10 h-10 bg-red-600 rounded-sm flex items-center justify-center transform group-hover:rotate-12 transition-transform shadow-[0_0_15px_rgba(220,38,38,0.5)]">
+          <div className="w-10 h-10 bg-[#b87209] rounded-sm flex items-center justify-center transform group-hover:scale-110 transition-transform shadow-[0_0_15px_rgba(184,114,9,0.4)]">
             <span className="text-white font-black text-2xl italic">N</span>
           </div>
           <div className="flex flex-col leading-none">
-            <span className="text-2xl font-black tracking-tighter uppercase italic">
-              Nolly<span className="text-red-600">Win</span>
+            <span className="text-2xl font-black tracking-tighter uppercase italic text-white">
+              Nolly<span className="text-[#b87209]">Win</span>
             </span>
-            <span className="text-[8px] uppercase tracking-[0.3em] text-gray-500 font-bold">
-              Box Office DeFi
+            <span className="text-[8px] uppercase tracking-[0.3em] text-[#ffffff]/60 font-bold">
+              By Nollywood Spotlight
             </span>
           </div>
         </Link>
@@ -33,7 +32,9 @@ export function Navbar() {
           <Link
             href="/"
             className={`text-xs font-bold uppercase tracking-[0.2em] transition-colors ${
-              isActive("/") ? "text-red-600" : "text-white hover:text-red-500"
+              isActive("/")
+                ? "text-[#b87209]"
+                : "text-white hover:text-[#b87209]"
             }`}
           >
             Home
@@ -43,8 +44,8 @@ export function Navbar() {
             href="/dashboard"
             className={`text-xs font-bold uppercase tracking-[0.2em] transition-colors ${
               isActive("/dashboard")
-                ? "text-red-600"
-                : "text-white hover:text-red-500"
+                ? "text-[#b87209]"
+                : "text-white hover:text-[#b87209]"
             }`}
           >
             Dashboard
@@ -54,8 +55,8 @@ export function Navbar() {
             href="/archive"
             className={`text-xs font-bold uppercase tracking-[0.2em] transition-colors ${
               isActive("/archive")
-                ? "text-red-600"
-                : "text-white hover:text-red-500"
+                ? "text-[#b87209]"
+                : "text-white hover:text-[#b87209]"
             }`}
           >
             Archive
@@ -65,23 +66,22 @@ export function Navbar() {
             href="/about"
             className={`text-xs font-bold uppercase tracking-[0.2em] transition-colors ${
               isActive("/about")
-                ? "text-red-600"
-                : "text-white hover:text-red-500"
+                ? "text-[#b87209]"
+                : "text-white hover:text-[#b87209]"
             }`}
           >
             About
           </Link>
 
-          {/* Action Area */}
+          {/* Action Area - Using the Deep Blue and Gold for the button */}
           <div className="pl-6 border-l border-white/10">
-            <button className="relative group overflow-hidden bg-white text-black px-8 py-2.5 text-[10px] font-black uppercase tracking-widest transition-all hover:pr-10">
+            <button className="relative group overflow-hidden bg-[#1d02cb] text-white px-8 py-2.5 text-[10px] font-black uppercase tracking-widest transition-all border border-[#b87209]/30 hover:border-[#b87209]">
               <span className="relative z-10">Connect Wallet</span>
-              <div className="absolute top-0 -right-full h-full w-full bg-red-600 transition-all group-hover:right-0 z-0" />
+              <div className="absolute top-0 -right-full h-full w-full bg-[#b87209] transition-all group-hover:right-0 z-0" />
             </button>
           </div>
         </div>
 
-        {/* Mobile Menu Trigger (Visual Only) */}
         <div className="md:hidden">
           <button className="p-2 text-white">
             <svg
