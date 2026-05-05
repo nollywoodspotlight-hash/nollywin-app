@@ -23,7 +23,7 @@ const config = createConfig({
       appName: "NollyWin",
       preference: "all",
     }),
-    injected(), // Allows MetaMask/Rainbow to connect to Zora
+    injected(),
   ],
   ssr: true,
   transports: {
@@ -49,29 +49,21 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
-        <OnchainKitWrapper KEY={KEY} farcasterConfig={farcasterConfig}>
-          {children}
-        </OnchainKitWrapper>
+        <OnchainKitWrapper children={children} />
       </QueryClientProvider>
     </WagmiProvider>
   );
 }
 
-// Sub-component to access useAccount within the WagmiProvider context
-function OnchainKitWrapper({
-  children,
-  KEY,
-  farcasterConfig,
-}: {
-  children: ReactNode;
-  KEY: string;
-  farcasterConfig: any;
-}) {
+function OnchainKitWrapper({ children }: { children: ReactNode }) {
   const { chain } = useAccount();
 
   return (
     <OnchainKitProvider
-      chain={chain || base} // Follows your wallet's chain instead of forcing Base
+      // The 'key' prop is the secret weapon here.
+      // It forces OnchainKit to reset entirely when the chain changes.
+      key={chain?.id || base.id}
+      chain={chain || base}
       apiKey={KEY}
     >
       <AuthKitProvider config={farcasterConfig}>{children}</AuthKitProvider>
