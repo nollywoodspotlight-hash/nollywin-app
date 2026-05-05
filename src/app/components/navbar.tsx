@@ -1,34 +1,44 @@
+"use client";
+
+import React from "react";
 import Link from "next/link";
 
 export function Navbar() {
   return (
-    <nav className="fixed top-0 w-full flex justify-between items-center px-8 py-6 z-50">
-      <div className="flex items-center gap-2">
-        <Link href="/" className="flex items-center gap-2 group">
-          <div className="w-8 h-8 bg-blue-600 rounded-lg rotate-12 flex items-center justify-center font-black text-white italic group-hover:rotate-0 transition-transform">
-            N
+    <nav className="sticky top-0 z-50 w-full border-b border-white/5 bg-black/60 backdrop-blur-md">
+      <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+        {/* Logo Section */}
+        <Link href="/" className="group flex items-center space-x-2">
+          <div className="w-10 h-10 bg-red-600 rounded-sm flex items-center justify-center transform group-hover:rotate-12 transition-transform">
+            <span className="text-white font-black text-xl">N</span>
           </div>
-          <span className="text-white font-bold tracking-tighter text-xl italic">
-            NollyWin
+          <span className="text-2xl font-black tracking-tighter uppercase italic">
+            Nolly<span className="text-red-600">Win</span>
           </span>
         </Link>
-      </div>
 
-      <div className="hidden md:flex gap-6 text-zinc-400 text-sm font-medium">
-        {/* Points to your new app/dashboard/page.tsx folder */}
-        <Link href="/dashboard" className="hover:text-white transition-colors">
-          Dashboard
-        </Link>
+        {/* Navigation Links */}
+        <div className="hidden md:flex items-center space-x-8">
+          <Link
+            href="/"
+            className="text-sm font-bold uppercase tracking-widest hover:text-red-500 transition-colors"
+          >
+            Home
+          </Link>
+          <Link
+            href="/dashboard"
+            className="text-sm font-bold uppercase tracking-widest hover:text-red-500 transition-colors"
+          >
+            Dashboard
+          </Link>
 
-        {/* NOTE: This will 404 until you create an app/trade/page.tsx folder */}
-        <Link href="/trade" className="hover:text-white transition-colors">
-          Trade
-        </Link>
-
-        {/* Points to external documentation or an internal /docs route */}
-        <Link href="/docs" className="hover:text-white transition-colors">
-          Docs
-        </Link>
+          {/* Placeholder for Wallet - OnchainKit/ConnectButton should be injected here */}
+          <div className="pl-4 border-l border-white/10">
+            <button className="bg-white text-black px-6 py-2 text-xs font-black uppercase tracking-tighter hover:bg-red-600 hover:text-white transition-all">
+              Connect Wallet
+            </button>
+          </div>
+        </div>
       </div>
     </nav>
   );
