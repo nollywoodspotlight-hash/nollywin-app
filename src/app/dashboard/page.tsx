@@ -2,8 +2,8 @@
 
 import React from "react";
 // These aliases ensure Vercel finds your lowercase files correctly
-import TradeWindow from "@/components/tradewindow";
-import DashboardStats from "@/components/dashboardstats";
+import TradeWindow from "../../components/tradewindow";
+import DashboardStats from "../../components/dashboardstats";
 
 /**
  * NollyWin Dashboard - Production v2.0
