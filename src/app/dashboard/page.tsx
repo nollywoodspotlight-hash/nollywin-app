@@ -2,8 +2,8 @@
 
 import React from "react";
 // Ensure these match your actual filenames: tradewindow.tsx and dashboardstats.tsx
-import TradeWindow from "../../components/tradewindow";
-import DashboardStats from "../../components/dashboardstats";
+import TradeWindow from "../components/tradewindow";
+import DashboardStats from "../components/dashboardstats";
 
 export default function DashboardPage() {
   return (
