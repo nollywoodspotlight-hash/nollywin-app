@@ -1,11 +1,11 @@
 "use client";
 
 import React from "react";
-import Link from "next/navigation";
+import Link from "next/link"; // FIXED: Changed from next/navigation
 
 export default function AboutPage() {
   return (
-    <div className="max-w-4xl mx-auto py-12 px-6 space-y-20">
+    <div className="max-w-4xl mx-auto py-12 px-6 space-y-20 relative z-10">
       {/* 1. HERO SECTION */}
       <section className="text-center space-y-6">
         <h2 className="text-[#b87209] text-xs font-black uppercase tracking-[0.5em] animate-pulse">
@@ -130,6 +130,7 @@ export default function AboutPage() {
             <a
               href="https://www.nollywoodspotlight.org"
               target="_blank"
+              rel="noopener noreferrer"
               className="text-gray-400 hover:text-white transition-colors text-xs font-black uppercase tracking-widest"
             >
               Blog
@@ -137,6 +138,7 @@ export default function AboutPage() {
             <a
               href="https://farcaster.xyz/nollyspot"
               target="_blank"
+              rel="noopener noreferrer"
               className="text-gray-400 hover:text-white transition-colors text-xs font-black uppercase tracking-widest"
             >
               Farcaster
@@ -144,6 +146,7 @@ export default function AboutPage() {
             <a
               href="https://x.com/nollyspotlight"
               target="_blank"
+              rel="noopener noreferrer"
               className="text-gray-400 hover:text-white transition-colors text-xs font-black uppercase tracking-widest"
             >
               X / Twitter
@@ -151,12 +154,11 @@ export default function AboutPage() {
           </div>
         </div>
 
-        <button
-          onClick={() => (window.location.href = "/")}
-          className="bg-[#1d02cb] hover:bg-[#b87209] text-white px-12 py-4 text-xs font-black uppercase tracking-[0.2em] transition-all transform hover:scale-105 shadow-2xl"
-        >
-          Join the Production
-        </button>
+        <Link href="/">
+          <button className="bg-[#1d02cb] hover:bg-[#b87209] text-white px-12 py-4 text-xs font-black uppercase tracking-[0.2em] transition-all transform hover:scale-105 shadow-2xl">
+            Join the Production
+          </button>
+        </Link>
       </section>
     </div>
   );
