@@ -26,32 +26,35 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} min-h-screen flex flex-col bg-black text-white relative`}
       >
-        <AuthKitProvider config={farcasterConfig}>
-          <Providers>
-            <LiveTicker />
-            <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
-              <div
-                className="w-full h-full bg-cover bg-center opacity-40"
-                style={{
-                  backgroundImage: "url('/galaxy.jpg')",
-                  maskImage:
-                    "radial-gradient(circle at center, black 20%, transparent 80%)",
-                  WebkitMaskImage:
+        <Providers>
+          <LiveTicker />
+
+          {/* Background Layer */}
+          <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+            <div
+              className="w-full h-full bg-cover bg-center opacity-40"
+              style={{
+                backgroundImage: "url('/galaxy.jpg')",
+                maskImage:
+                  "radial-gradient(circle at center, black 20%, transparent 80%)",
+                WebkitMaskImage:
+                  "radial-gradient(circle at center, black 20%, transparent 80%)",
               }}
-              />
-              <div className="absolute inset-0 bg-black/60" />
-            </div>
+            />
+            <div className="absolute inset-0 bg-black/60" />
+          </div>
 
-            <Navbar />
-            <main className="flex-grow max-w-7xl mx-auto w-full px-6 py-8 z-10 relative">
-              {children}
-            </main>
+          <Navbar />
 
-            <footer className="p-8 text-center text-gray-500 text-xs border-t border-white/5 z-10 bg-black/40 backdrop-blur-md">
-              © 2026 NollyWin App • Built on Base
-            </footer>
-          </Providers>
-        </AuthKitProvider>
-      html>
+          <main className="flex-grow max-w-7xl mx-auto w-full px-6 py-8 z-10 relative">
+            {children}
+          </main>
+
+          <footer className="p-8 text-center text-gray-500 text-xs border-t border-white/5 z-10 bg-black/40 backdrop-blur-md">
+            © 2026 NollyWin App • Built on Base
+          </footer>
+        </Providers>
+      </body>
+    </html>
   );
 }
