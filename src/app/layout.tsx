@@ -1,5 +1,9 @@
 "use client";
 
+// FORCE CACHE PURGE
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 import React, { useState, useEffect } from "react";
 import LiveTicker from "./components/liveticker";
 import { Geist, Geist_Mono } from "next/font/google";
