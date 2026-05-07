@@ -1,7 +1,6 @@
 import { createAppClient, viemConnector } from "@farcaster/auth-client";
 import { NextRequest, NextResponse } from "next/server";
 
-// FORCE THE ROUTE TO BE DYNAMIC (Fixes the "localhost" caching leak)
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
@@ -10,6 +9,10 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { message, signature, nonce } = body;
 
+    // Dynamically get the domain from the request headers
+    // This handles localhost, nollywin-app.vercel.app, and nollywin.app automatically
+    const host = req.headers.get("host") || "nollywin-app.vercel.app";
+
     const appClient = createAppClient({
       ethereum: viemConnector(),
     });
@@ -17,12 +20,14 @@ export async function POST(req: NextRequest) {
     const verifyResult: any = await appClient.verifySignInMessage({
       message,
       signature,
-      domain: "nollywin.app",
+      domain: host, // Matches the domain detected by the frontend
       nonce,
     });
 
     if (verifyResult.success) {
-      console.log("Verification Success for:", verifyResult.data?.username);
+      console.log(
+        `Verification Success for ${verifyResult.data?.username} on ${host}`,
+      );
       return NextResponse.json({
         success: true,
         user: verifyResult.data,
