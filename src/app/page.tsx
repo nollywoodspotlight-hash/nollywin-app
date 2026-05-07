@@ -10,16 +10,18 @@ export default function HomePage() {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
 
-  // Keep the hook for checking existing sessions on page load
+  // Destructure for checking existing login state
   const { isSuccess, isConnected } = useSignIn({});
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Handle Redirection for users who are ALREADY logged in when they land here
+  // 1. AUTO-REDIRECT FOR EXISTING SESSIONS
+  // This catches users who are already logged in when they hit the home page.
   useEffect(() => {
     if (mounted && (isConnected || isSuccess)) {
+      console.log("Existing session detected, redirecting...");
       router.push("/dashboard");
     }
   }, [isConnected, isSuccess, router, mounted]);
@@ -28,7 +30,7 @@ export default function HomePage() {
 
   return (
     <div className="flex flex-col items-center pt-10 md:pt-16 pb-32">
-      {/* 1. HERO SECTION */}
+      {/* HERO SECTION */}
       <div className="text-center space-y-6 max-w-4xl px-4">
         <h2 className="text-[#b87209] text-xs font-black uppercase tracking-[0.4em] animate-pulse">
           Now Showing: Onchain Automation
@@ -39,17 +41,9 @@ export default function HomePage() {
             PROFITS.
           </span>
         </h1>
-        <p className="text-gray-400 text-lg md:text-xl font-medium max-w-2xl mx-auto leading-relaxed">
-          The world's first cinematic trading engine. Deploy automated
-          strategies on{" "}
-          <span className="text-white font-bold underline decoration-[#b87209]">
-            Base
-          </span>
-          .
-        </p>
       </div>
 
-      {/* 2. DUAL AUTH PORTAL */}
+      {/* DUAL AUTH PORTAL */}
       <div className="mt-12 w-full max-w-sm bg-black/40 border border-[#b87209]/20 p-8 rounded-sm backdrop-blur-md shadow-2xl relative z-50">
         <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#b87209] text-black text-[9px] font-black px-4 py-1 uppercase tracking-widest whitespace-nowrap">
           Executive Access
@@ -74,18 +68,19 @@ export default function HomePage() {
           </div>
 
           <div className="farcaster-button-wrapper hover:scale-[1.02] transition-transform flex justify-center relative z-[60]">
-            {/* FIXED: Added onSuccess callback for immediate redirection */}
+            {/* 2. FORCED REDIRECT ON SUCCESS */}
+            {/* This is the most reliable way to handle the login event directly */}
             <SignInButton
-              onSuccess={() => {
-                console.log("Farcaster Sign In Successful");
-                router.push("/dashboard");
+              onSuccess={(res) => {
+                console.log("Login successful:", res);
+                window.location.href = "/dashboard"; // Using window.location for a hard redirect if router fails
               }}
             />
           </div>
         </div>
       </div>
 
-      {/* 3. PRODUCTION GUIDE SECTION */}
+      {/* PRODUCTION GUIDE SECTION */}
       <div className="mt-12 w-full max-w-6xl px-6 border-t border-white/5 pt-10">
         <div className="mb-10 text-center md:text-left">
           <h2 className="text-[#b87209] text-[10px] font-black uppercase tracking-[0.4em] mb-4">
