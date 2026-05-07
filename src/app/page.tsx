@@ -9,15 +9,10 @@ import "@farcaster/auth-kit/styles.css";
 export default function HomePage() {
   const router = useRouter();
 
-  /**
-   * SUCCESS HANDLER
-   * Specifically for Farcaster authentication.
-   * OnchainKit (Base) connections are handled by the global
-   * useEffect listener in Navbar.tsx.
-   */
-  const handleSuccess = useCallback(
+  // Robust handler for Farcaster success/completion
+  const handleFarcasterAuth = useCallback(
     (res: any) => {
-      if (res?.status === "success") {
+      if (res?.status === "success" || res?.state === "completed") {
         router.push("/dashboard");
       }
     },
@@ -72,7 +67,10 @@ export default function HomePage() {
 
           {/* FARCASTER CONNECTION PATH */}
           <div className="farcaster-button-wrapper hover:scale-[1.02] transition-transform flex justify-center">
-            <SignInButton onSuccess={handleSuccess} />
+            <SignInButton
+              onSuccess={handleFarcasterAuth}
+              onStatusResponse={handleFarcasterAuth}
+            />
           </div>
         </div>
       </div>

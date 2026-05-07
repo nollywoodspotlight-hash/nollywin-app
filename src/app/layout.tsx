@@ -21,8 +21,8 @@ const geistMono = Geist_Mono({
 // PRODUCTION FARCASTER CONFIG
 const farcasterConfig = {
   rpcUrl: "https://mainnet.optimism.io",
-  domain: "nollywin.app", // YOUR LIVE DOMAIN
-  siweUri: "/api/auth/siwe",
+  domain: "nollywin.app",
+  siweUri: "https://nollywin.app/api/auth/siwe",
 };
 
 export default function RootLayout({
@@ -39,6 +39,7 @@ export default function RootLayout({
           <Providers>
             <LiveTicker />
 
+            {/* Background Layer */}
             <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
               <div
                 className="w-full h-full bg-cover bg-center opacity-40"
