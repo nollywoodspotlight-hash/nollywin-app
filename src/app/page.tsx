@@ -3,6 +3,7 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 import { SignInButton } from "@farcaster/auth-kit";
+import { ConnectWallet, Wallet } from "@coinbase/onchainkit/wallet";
 import "@farcaster/auth-kit/styles.css";
 
 export default function HomePage() {
@@ -42,13 +43,13 @@ export default function HomePage() {
         </div>
 
         <div className="space-y-4">
-          <button
-            onClick={handleSuccess}
-            className="w-full bg-white text-black font-black py-4 uppercase tracking-tighter flex items-center justify-center space-x-3 hover:bg-gray-200 transition-all shadow-lg group"
-          >
-            <div className="w-5 h-5 bg-[#0052FF] rounded-full group-hover:scale-110 transition-transform" />
-            <span>Connect Base Wallet</span>
-          </button>
+          {/* WRAPPED IN WALLET COMPONENT TO ENABLE FUNCTIONALITY */}
+          <Wallet>
+            <ConnectWallet className="w-full bg-white text-black font-black py-4 uppercase tracking-tighter flex items-center justify-center space-x-3 hover:bg-gray-200 transition-all shadow-lg group rounded-none">
+              <div className="w-5 h-5 bg-[#0052FF] rounded-full group-hover:scale-110 transition-transform" />
+              <span>Connect Base Wallet</span>
+            </ConnectWallet>
+          </Wallet>
 
           <div className="flex items-center space-x-2 py-2">
             <div className="h-[1px] bg-white/10 flex-grow" />
@@ -79,7 +80,6 @@ export default function HomePage() {
           </h3>
         </div>
 
-        {/* Updated to 4 columns to include Referral */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="group space-y-4 p-6 bg-[#1d02cb]/5 border border-white/5 hover:border-[#b87209]/30 transition-all rounded-sm">
             <div className="text-3xl font-black italic text-[#b87209]/20 group-hover:text-[#b87209] transition-colors">
@@ -120,7 +120,6 @@ export default function HomePage() {
             </p>
           </div>
 
-          {/* NEW STEP: THE REFERRAL INCENTIVE */}
           <div className="group space-y-4 p-6 bg-[#b87209]/10 border border-[#b87209]/40 hover:bg-[#b87209]/20 transition-all rounded-sm">
             <div className="text-3xl font-black italic text-[#b87209] group-hover:animate-bounce">
               $$

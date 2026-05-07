@@ -85,20 +85,22 @@ export function Navbar() {
           <div className="pl-6 border-l border-white/10">
             <Wallet>
               <ConnectWallet className="relative group overflow-hidden bg-[#1d02cb] text-white px-8 py-2.5 text-[10px] font-black uppercase tracking-widest transition-all border border-[#b87209]/30 hover:border-[#b87209] rounded-none">
-                {/* Dynamically change text based on connection */}
                 <span className="relative z-10">
                   {isConnected ? "Manage Wallet" : "Connect Wallet"}
                 </span>
                 <div className="absolute top-0 -right-full h-full w-full bg-[#b87209] transition-all group-hover:right-0 z-0" />
               </ConnectWallet>
-              <WalletDropdown>
-                <Identity className="px-4 pt-3 pb-2" hasCopyAddressOnClick>
+
+              {/* FIXED DROPDOWN STYLING */}
+              <WalletDropdown className="bg-black border border-[#b87209]/30 shadow-2xl overflow-hidden min-w-[280px]">
+                <Identity className="px-4 pt-4 pb-2" hasCopyAddressOnClick>
                   <Avatar />
-                  <Name />
-                  <Address />
+                  <Name className="text-white font-bold" />
+                  <Address className="text-[#b87209]/70 text-[10px]" />
                 </Identity>
-                {/* This handles the logout inside the wallet UI */}
-                <WalletDropdownDisconnect className="bg-red-600 hover:bg-red-700 text-white font-bold uppercase text-[10px]" />
+                <div className="p-3 border-t border-white/5">
+                  <WalletDropdownDisconnect className="w-full bg-red-600 hover:bg-red-700 text-white font-black uppercase text-[10px] py-3 rounded-none transition-all" />
+                </div>
               </WalletDropdown>
             </Wallet>
           </div>
