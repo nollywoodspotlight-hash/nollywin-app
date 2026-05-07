@@ -128,7 +128,7 @@ export default function AboutPage() {
           </h3>
           <div className="flex flex-wrap justify-center gap-8 pt-4">
             <a
-              href="https://nollywoodspotlight.org"
+              href="https://www.nollywoodspotlight.org"
               target="_blank"
               className="text-gray-400 hover:text-white transition-colors text-xs font-black uppercase tracking-widest"
             >
