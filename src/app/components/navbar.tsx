@@ -3,6 +3,13 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import {
+  ConnectWallet,
+  Wallet,
+  WalletDropdown,
+  WalletDropdownDisconnect,
+} from "@coinbase/onchainkit/wallet";
+import { Address, Avatar, Name, Identity } from "@coinbase/onchainkit/identity";
 
 export function Navbar() {
   const pathname = usePathname();
@@ -12,10 +19,10 @@ export function Navbar() {
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-white/5 bg-[#1d02cb]/10 backdrop-blur-md">
       <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-        {/* Logo Section - Now using the Blue and Gold theme */}
+        {/* Logo Section */}
         <Link href="/" className="group flex items-center space-x-3">
           <div className="w-10 h-10 bg-[#b87209] rounded-sm flex items-center justify-center transform group-hover:scale-110 transition-transform shadow-[0_0_15px_rgba(184,114,9,0.4)]">
-            <span className="text-white font-black text-2xl italic">N</span>
+            <span className="text-white font-black text-2xl italic">NW</span>
           </div>
           <div className="flex flex-col leading-none">
             <span className="text-2xl font-black tracking-tighter uppercase italic text-white">
@@ -73,15 +80,26 @@ export function Navbar() {
             About
           </Link>
 
-          {/* Action Area - Using the Deep Blue and Gold for the button */}
+          {/* Action Area - FIXED CONNECT BUTTON */}
           <div className="pl-6 border-l border-white/10">
-            <button className="relative group overflow-hidden bg-[#1d02cb] text-white px-8 py-2.5 text-[10px] font-black uppercase tracking-widest transition-all border border-[#b87209]/30 hover:border-[#b87209]">
-              <span className="relative z-10">Connect Wallet</span>
-              <div className="absolute top-0 -right-full h-full w-full bg-[#b87209] transition-all group-hover:right-0 z-0" />
-            </button>
+            <Wallet>
+              <ConnectWallet className="relative group overflow-hidden bg-[#1d02cb] text-white px-8 py-2.5 text-[10px] font-black uppercase tracking-widest transition-all border border-[#b87209]/30 hover:border-[#b87209] rounded-none">
+                <span className="relative z-10">Connect Wallet</span>
+                <div className="absolute top-0 -right-full h-full w-full bg-[#b87209] transition-all group-hover:right-0 z-0" />
+              </ConnectWallet>
+              <WalletDropdown>
+                <Identity className="px-4 pt-3 pb-2" hasCopyAddressOnClick>
+                  <Avatar />
+                  <Name />
+                  <Address />
+                </Identity>
+                <WalletDropdownDisconnect />
+              </WalletDropdown>
+            </Wallet>
           </div>
         </div>
 
+        {/* Mobile Menu Icon */}
         <div className="md:hidden">
           <button className="p-2 text-white">
             <svg
