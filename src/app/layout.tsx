@@ -8,7 +8,11 @@ import { Providers } from "./components/providers";
 import { AuthKitProvider } from "@farcaster/auth-kit";
 import "@farcaster/auth-kit/styles.css";
 
-const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
+
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
@@ -22,9 +26,9 @@ const farcasterConfig = {
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
   return (
     <html lang="en" className="h-full antialiased">
       <body
@@ -32,11 +36,9 @@ export default function RootLayout({
       >
         <AuthKitProvider config={farcasterConfig}>
           <Providers>
-            <div className="relative z-50">
-              <LiveTicker />
-              <Navbar />
-            </div>
+            <LiveTicker />
 
+            {/* Background Layer - pointer-events-none added to prevent blocking clicks */}
             <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
               <div
                 className="w-full h-full bg-cover bg-center opacity-40"
@@ -50,6 +52,8 @@ export default function RootLayout({
               />
               <div className="absolute inset-0 bg-black/60" />
             </div>
+
+            <Navbar />
 
             <main className="flex-grow max-w-7xl mx-auto w-full px-6 py-8 z-10 relative">
               {children}
