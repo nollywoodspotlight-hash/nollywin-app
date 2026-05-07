@@ -17,8 +17,6 @@ const geistMono = Geist_Mono({
 
 /**
  * PRODUCTION FARCASTER CONFIG
- * Defined outside the component to ensure a stable reference.
- * This prevents the 'unlit' button or polling failures on Vercel.
  */
 const getFarcasterConfig = () => {
   const isProd =
@@ -46,7 +44,6 @@ export default function RootLayout({
     setMounted(true);
   }, []);
 
-  // Prevent hydration mismatch on Vercel
   if (!mounted) {
     return (
       <html lang="en">
@@ -60,15 +57,14 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} min-h-screen flex flex-col bg-black text-white relative`}
       >
-        <AuthKitProvider config={getFarcasterConfig()}>
-          <Providers>
-            {/* Header / Navigation Layer */}
+        <Providers>
+          {/* CRITICAL FIX: AuthKitProvider is now INSIDE Providers */}
+          <AuthKitProvider config={getFarcasterConfig()}>
             <div className="relative z-50">
               <LiveTicker />
               <Navbar />
             </div>
 
-            {/* Background Layer: Galaxy & Overlays */}
             <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden select-none">
               <div
                 className="w-full h-full bg-cover bg-center opacity-40"
@@ -83,7 +79,6 @@ export default function RootLayout({
               <div className="absolute inset-0 bg-black/60" />
             </div>
 
-            {/* Main Content: Ensure it sits above the background but below Nav */}
             <main className="flex-grow max-w-7xl mx-auto w-full px-6 py-8 z-10 relative">
               {children}
             </main>
@@ -91,8 +86,8 @@ export default function RootLayout({
             <footer className="p-8 text-center text-gray-500 text-xs border-t border-white/5 z-10 bg-black/40 backdrop-blur-md relative">
               © 2026 NollyWin App • Built on Base Network
             </footer>
-          </Providers>
-        </AuthKitProvider>
+          </AuthKitProvider>
+        </Providers>
       </body>
     </html>
   );
