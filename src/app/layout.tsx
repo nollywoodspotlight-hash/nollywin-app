@@ -17,20 +17,13 @@ const geistMono = Geist_Mono({
 
 /**
  * PRODUCTION FARCASTER CONFIG
+ * Hardcoding these values ensures the SIWE (Sign In With Ethereum)
+ * signature always matches your live domain.
  */
-const getFarcasterConfig = () => {
-  const isProd =
-    typeof window !== "undefined" &&
-    !window.location.host.includes("localhost");
-  const domain = isProd ? "nollywin.app" : "localhost:3000";
-  const origin = isProd ? "https://nollywin.app" : "http://localhost:3000";
-
-  return {
-    rpcUrl: "https://mainnet.optimism.io",
-    domain: domain,
-    siweUri: `${origin}/api/auth/farcaster`,
-    relay: "https://relay.farcaster.xyz",
-  };
+const farcasterConfig = {
+  rpcUrl: "https://mainnet.optimism.io",
+  domain: "nollywin.app",
+  siweUri: "https://nollywin.app/api/auth/farcaster",
 };
 
 export default function RootLayout({
@@ -44,6 +37,7 @@ export default function RootLayout({
     setMounted(true);
   }, []);
 
+  // Standard Next.js hydration safety check
   if (!mounted) {
     return (
       <html lang="en">
@@ -58,13 +52,14 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} min-h-screen flex flex-col bg-black text-white relative`}
       >
         <Providers>
-          {/* CRITICAL FIX: AuthKitProvider is now INSIDE Providers */}
-          <AuthKitProvider config={getFarcasterConfig()}>
+          {/* AuthKitProvider should be a direct child of your global Providers */}
+          <AuthKitProvider config={farcasterConfig}>
             <div className="relative z-50">
               <LiveTicker />
               <Navbar />
             </div>
 
+            {/* Background Layer */}
             <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden select-none">
               <div
                 className="w-full h-full bg-cover bg-center opacity-40"
@@ -79,6 +74,7 @@ export default function RootLayout({
               <div className="absolute inset-0 bg-black/60" />
             </div>
 
+            {/* Main Content */}
             <main className="flex-grow max-w-7xl mx-auto w-full px-6 py-8 z-10 relative">
               {children}
             </main>
