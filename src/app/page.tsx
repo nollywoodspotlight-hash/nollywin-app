@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { SignInButton } from "@farcaster/auth-kit";
 import { ConnectWallet, Wallet } from "@coinbase/onchainkit/wallet";
@@ -10,12 +10,19 @@ export default function HomePage() {
   const router = useRouter();
 
   /**
-   * Button 1 & 2 (Base Wallet) are handled by the useEffect in Navbar.tsx.
-   * Button 3 (Farcaster) is handled here via the onSuccess callback.
+   * SUCCESS HANDLER
+   * Specifically for Farcaster authentication.
+   * OnchainKit (Base) connections are handled by the global
+   * useEffect listener in Navbar.tsx.
    */
-  const handleSuccess = () => {
-    router.push("/dashboard");
-  };
+  const handleSuccess = useCallback(
+    (res: any) => {
+      if (res?.status === "success") {
+        router.push("/dashboard");
+      }
+    },
+    [router],
+  );
 
   return (
     <div className="flex flex-col items-center pt-10 md:pt-16 pb-32">
