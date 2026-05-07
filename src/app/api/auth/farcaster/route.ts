@@ -1,6 +1,10 @@
 import { createAppClient, viemConnector } from "@farcaster/auth-client";
 import { NextRequest, NextResponse } from "next/server";
 
+// FORCE THE ROUTE TO BE DYNAMIC (Fixes the "localhost" caching leak)
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -10,7 +14,6 @@ export async function POST(req: NextRequest) {
       ethereum: viemConnector(),
     });
 
-    // We use a broad type here to stop TypeScript from flagging 'data' or 'error'
     const verifyResult: any = await appClient.verifySignInMessage({
       message,
       signature,
@@ -19,6 +22,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (verifyResult.success) {
+      console.log("Verification Success for:", verifyResult.data?.username);
       return NextResponse.json({
         success: true,
         user: verifyResult.data,
