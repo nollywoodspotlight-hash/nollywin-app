@@ -9,12 +9,15 @@ import "@farcaster/auth-kit/styles.css";
 export default function HomePage() {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
+
+  // Keep the hook for checking existing sessions on page load
   const { isSuccess, isConnected } = useSignIn({});
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  // Handle Redirection for users who are ALREADY logged in when they land here
   useEffect(() => {
     if (mounted && (isConnected || isSuccess)) {
       router.push("/dashboard");
@@ -71,8 +74,13 @@ export default function HomePage() {
           </div>
 
           <div className="farcaster-button-wrapper hover:scale-[1.02] transition-transform flex justify-center relative z-[60]">
-            {/* debug={true} helps diagnose why it won't light up */}
-            <SignInButton />
+            {/* FIXED: Added onSuccess callback for immediate redirection */}
+            <SignInButton
+              onSuccess={() => {
+                console.log("Farcaster Sign In Successful");
+                router.push("/dashboard");
+              }}
+            />
           </div>
         </div>
       </div>
