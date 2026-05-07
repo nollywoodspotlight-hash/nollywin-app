@@ -9,6 +9,10 @@ import "@farcaster/auth-kit/styles.css";
 export default function HomePage() {
   const router = useRouter();
 
+  /**
+   * Button 1 & 2 (Base Wallet) are handled by the useEffect in Navbar.tsx.
+   * Button 3 (Farcaster) is handled here via the onSuccess callback.
+   */
   const handleSuccess = () => {
     router.push("/dashboard");
   };
@@ -43,7 +47,7 @@ export default function HomePage() {
         </div>
 
         <div className="space-y-4">
-          {/* WRAPPED IN WALLET COMPONENT TO ENABLE FUNCTIONALITY */}
+          {/* BASE WALLET CONNECTION PATH */}
           <Wallet>
             <ConnectWallet className="w-full bg-white text-black font-black py-4 uppercase tracking-tighter flex items-center justify-center space-x-3 hover:bg-gray-200 transition-all shadow-lg group rounded-none">
               <div className="w-5 h-5 bg-[#0052FF] rounded-full group-hover:scale-110 transition-transform" />
@@ -59,6 +63,7 @@ export default function HomePage() {
             <div className="h-[1px] bg-white/10 flex-grow" />
           </div>
 
+          {/* FARCASTER CONNECTION PATH */}
           <div className="farcaster-button-wrapper hover:scale-[1.02] transition-transform flex justify-center">
             <SignInButton onSuccess={handleSuccess} />
           </div>
