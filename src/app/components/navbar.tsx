@@ -21,7 +21,6 @@ export function Navbar() {
   /**
    * AUTOMATIC REDIRECT LOGIC
    * This handles both the Navbar "Connect" and the Home Page "Connect Base Wallet" buttons.
-   * If the user is on the home page and isConnected becomes true, push to dashboard.
    */
   useEffect(() => {
     if (isConnected && pathname === "/") {
@@ -39,7 +38,7 @@ export function Navbar() {
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-white/5 bg-[#1d02cb]/10 backdrop-blur-md">
       <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-        {/* Logo Section - Linked to Home */}
+        {/* Logo Section */}
         <Link href="/" className="group flex items-center space-x-3">
           <div className="w-10 h-10 bg-[#b87209] rounded-sm flex items-center justify-center transform group-hover:scale-110 transition-transform shadow-[0_0_15px_rgba(184,114,9,0.4)]">
             <span className="text-white font-black text-2xl italic">NW</span>
@@ -62,12 +61,22 @@ export function Navbar() {
           >
             Home
           </Link>
+
+          {/* NEW: About Page Link */}
+          <Link
+            href="/about"
+            className={`text-xs font-bold uppercase tracking-[0.2em] transition-colors ${isActive("/about") ? "text-[#b87209]" : "text-white hover:text-[#b87209]"}`}
+          >
+            The Script
+          </Link>
+
           <Link
             href="/dashboard"
             className={`text-xs font-bold uppercase tracking-[0.2em] transition-colors ${isActive("/dashboard") ? "text-[#b87209]" : "text-white hover:text-[#b87209]"}`}
           >
             Dashboard
           </Link>
+
           <Link
             href="/archive"
             className={`text-xs font-bold uppercase tracking-[0.2em] transition-colors ${isActive("/archive") ? "text-[#b87209]" : "text-white hover:text-[#b87209]"}`}
@@ -75,7 +84,7 @@ export function Navbar() {
             Archive
           </Link>
 
-          {/* Quick Sign Out Option - Visible when logged in */}
+          {/* Quick Sign Out Option */}
           {isConnected && (
             <button
               onClick={handleLogout}
@@ -95,7 +104,6 @@ export function Navbar() {
                 <div className="absolute top-0 -right-full h-full w-full bg-[#b87209] transition-all group-hover:right-0 z-0" />
               </ConnectWallet>
 
-              {/* STYLING FIX: Ensures the disconnect button is visible and the dropdown is sized correctly */}
               <WalletDropdown className="bg-black border border-[#b87209]/30 shadow-2xl overflow-hidden min-w-[280px]">
                 <Identity className="px-4 pt-4 pb-2" hasCopyAddressOnClick>
                   <Avatar />

@@ -3,11 +3,22 @@
 import React, { useState, useEffect } from "react";
 import { useAccount, useDisconnect } from "wagmi";
 import { useRouter } from "next/navigation";
+import { useSignIn } from "@farcaster/auth-kit";
 
 export default function Dashboard() {
-  const { address, isConnected } = useAccount();
+  const { address, isConnected: isWagmiConnected } = useAccount();
   const { disconnect } = useDisconnect();
   const router = useRouter();
+
+  // Farcaster Auth Hook
+  const {
+    isConnected: isFarcasterConnected,
+    isSuccess,
+    data: farcasterData,
+  } = useSignIn({});
+
+  // Loading state to prevent "bouncing" back to home while SDK warms up
+  const [isAuthorizing, setIsAuthorizing] = useState(true);
 
   // State for the Cinematic Trade Form
   const [formData, setFormData] = useState({
@@ -21,20 +32,35 @@ export default function Dashboard() {
   // Current Trade Status (Mocked for UI display)
   const [lifecycleState, setLifecycleState] = useState("ACTIVE");
 
-  // Single Wallet Enforcement & Session Management
+  /**
+   * SESSION PROTECTION LOGIC
+   * Checks both Wagmi (Wallet) and Farcaster (Social) connections.
+   * Gives a 1.5s grace period before redirecting to prevent the "bounce."
+   */
   useEffect(() => {
-    if (!isConnected) {
-      router.push("/");
-    }
-  }, [isConnected, router]);
+    const authTimer = setTimeout(() => {
+      const isUserAuthenticated =
+        isWagmiConnected || isFarcasterConnected || isSuccess;
+
+      if (!isUserAuthenticated) {
+        router.push("/");
+      } else {
+        setIsAuthorizing(false);
+      }
+    }, 1500);
+
+    return () => clearTimeout(authTimer);
+  }, [isWagmiConnected, isFarcasterConnected, isSuccess, router]);
 
   const handleLogout = () => {
     disconnect();
+    // If you add a Farcaster signOut function later, call it here.
     router.push("/");
   };
 
-  // Generate Unique Referral Link
-  const referralLink = `https://nollywin.app/?ref=${address?.slice(0, 8)}`;
+  // Generate Unique Referral Link (Handles both Wallet Address or Farcaster Username)
+  const userIdentifier = farcasterData?.username || address?.slice(0, 8);
+  const referralLink = `https://nollywin.app/?ref=${userIdentifier}`;
 
   const statusLights = [
     "ACTIVE",
@@ -44,8 +70,20 @@ export default function Dashboard() {
     "CANCELLED",
   ];
 
+  // Loading Screen
+  if (isAuthorizing) {
+    return (
+      <div className="h-[70vh] flex flex-col items-center justify-center space-y-4">
+        <div className="w-12 h-12 border-4 border-[#b87209] border-t-transparent rounded-full animate-spin" />
+        <h2 className="text-[#b87209] font-black uppercase italic tracking-widest text-[10px] animate-pulse">
+          Verifying Executive Producer Credentials...
+        </h2>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-10 pb-20">
+    <div className="space-y-10 pb-20 animate-in fade-in duration-700">
       {/* HEADER SECTION */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-white/5 pb-8">
         <div>
@@ -53,14 +91,19 @@ export default function Dashboard() {
             Current Production
           </h1>
           <div className="flex items-center gap-4">
-            <p className="text-gray-500 text-xs uppercase tracking-widest font-bold">
-              Executive Producer: {address?.slice(0, 6)}...{address?.slice(-4)}
+            <p className="text-gray-500 text-[10px] uppercase tracking-widest font-bold">
+              Executive Producer:{" "}
+              <span className="text-white">
+                {farcasterData?.username
+                  ? `@${farcasterData.username}`
+                  : `${address?.slice(0, 6)}...${address?.slice(-4)}`}
+              </span>
             </p>
             <button
               onClick={handleLogout}
               className="text-[9px] font-black text-red-500 hover:text-white uppercase tracking-tighter border border-red-500/20 px-2 py-0.5 transition-colors"
             >
-              Terminate Session (Logout)
+              Terminate Session
             </button>
           </div>
         </div>
@@ -76,7 +119,7 @@ export default function Dashboard() {
             </code>
             <button
               onClick={() => navigator.clipboard.writeText(referralLink)}
-              className="text-[10px] font-bold text-[#b87209] hover:text-white uppercase"
+              className="text-[10px] font-bold text-[#b87209] hover:text-white uppercase transition-colors"
             >
               Copy
             </button>
@@ -114,7 +157,7 @@ export default function Dashboard() {
                 <input
                   type="number"
                   placeholder="0.01"
-                  className="w-full bg-white/5 border border-white/10 px-4 py-3 text-white outline-none"
+                  className="w-full bg-white/5 border border-white/10 px-4 py-3 text-white outline-none focus:border-[#b87209]"
                 />
               </div>
               <div>
@@ -124,7 +167,7 @@ export default function Dashboard() {
                 <input
                   type="number"
                   placeholder="1"
-                  className="w-full bg-white/5 border border-white/10 px-4 py-3 text-white outline-none"
+                  className="w-full bg-white/5 border border-white/10 px-4 py-3 text-white outline-none focus:border-[#b87209]"
                 />
               </div>
             </div>
@@ -133,9 +176,13 @@ export default function Dashboard() {
               <label className="block text-[10px] text-gray-500 uppercase font-black mb-2">
                 Sell Options (Take Profit)
               </label>
-              <select className="w-full bg-white/5 border border-white/10 px-4 py-3 text-white outline-none appearance-none cursor-pointer">
+              <select className="w-full bg-white/5 border border-white/10 px-4 py-3 text-white outline-none appearance-none cursor-pointer focus:border-[#b87209]">
                 {[1, 2, 3, 5, 10, 12].map((x) => (
-                  <option key={x} value={`${x}X`}>
+                  <option
+                    key={x}
+                    value={`${x}X`}
+                    className="bg-black text-white"
+                  >
                     {x}X (Moonshot)
                   </option>
                 ))}
@@ -156,7 +203,6 @@ export default function Dashboard() {
                 Live Feed
               </h2>
 
-              {/* PRODUCTION STATUS LIGHTS */}
               <div className="flex gap-2">
                 {statusLights.map((status) => (
                   <div
@@ -173,7 +219,6 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* MOCKED TRADE DATA DISPLAY */}
             <div className="space-y-8">
               <div className="flex items-center justify-between border-b border-white/5 pb-4">
                 <span className="text-gray-500 text-[10px] font-bold uppercase">

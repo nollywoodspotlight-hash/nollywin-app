@@ -11,26 +11,31 @@ export default function HomePage() {
   const [mounted, setMounted] = useState(false);
 
   // Destructure for checking existing login state
-  const { isSuccess, isConnected } = useSignIn({});
+  const { isSuccess, isConnected, data } = useSignIn({});
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // 1. AUTO-REDIRECT FOR EXISTING SESSIONS
-  // This catches users who are already logged in when they hit the home page.
+  /**
+   * 1. AUTO-REDIRECT FOR EXISTING SESSIONS
+   * Added a 500ms delay to ensure the session is stable before moving.
+   */
   useEffect(() => {
-    if (mounted && (isConnected || isSuccess)) {
+    if (mounted && (isConnected || isSuccess || data?.username)) {
       console.log("Existing session detected, redirecting...");
-      router.push("/dashboard");
+      const timer = setTimeout(() => {
+        router.push("/dashboard");
+      }, 500);
+      return () => clearTimeout(timer);
     }
-  }, [isConnected, isSuccess, router, mounted]);
+  }, [isConnected, isSuccess, data, router, mounted]);
 
   if (!mounted) return null;
 
   return (
     <div className="flex flex-col items-center pt-10 md:pt-16 pb-32">
-      {/* HERO SECTION */}
+      {/* 1. HERO SECTION */}
       <div className="text-center space-y-6 max-w-4xl px-4">
         <h2 className="text-[#b87209] text-xs font-black uppercase tracking-[0.4em] animate-pulse">
           Now Showing: Onchain Automation
@@ -41,16 +46,24 @@ export default function HomePage() {
             PROFITS.
           </span>
         </h1>
+        <p className="text-gray-400 text-lg md:text-xl font-medium max-w-2xl mx-auto leading-relaxed">
+          The world's first cinematic trading engine. Deploy automated
+          strategies on{" "}
+          <span className="text-white font-bold underline decoration-[#b87209]">
+            Base
+          </span>{" "}
+          with the speed of a Lagos blockbuster.
+        </p>
       </div>
 
-      {/* DUAL AUTH PORTAL */}
+      {/* 2. DUAL AUTH PORTAL */}
       <div className="mt-12 w-full max-w-sm bg-black/40 border border-[#b87209]/20 p-8 rounded-sm backdrop-blur-md shadow-2xl relative z-50">
         <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#b87209] text-black text-[9px] font-black px-4 py-1 uppercase tracking-widest whitespace-nowrap">
           Executive Access
         </div>
 
         <div className="space-y-4">
-          <div className="relative z-50">
+          <div className="relative">
             <Wallet>
               <ConnectWallet className="w-full bg-white text-black font-black py-4 uppercase tracking-tighter flex items-center justify-center space-x-3 hover:bg-gray-200 transition-all shadow-lg group rounded-none">
                 <div className="w-5 h-5 bg-[#0052FF] rounded-full group-hover:scale-110 transition-transform" />
@@ -67,33 +80,47 @@ export default function HomePage() {
             <div className="h-[1px] bg-white/10 flex-grow" />
           </div>
 
-          <div className="farcaster-button-wrapper hover:scale-[1.02] transition-transform flex justify-center relative z-[60]">
-            {/* 2. FORCED REDIRECT ON SUCCESS */}
-            {/* This is the most reliable way to handle the login event directly */}
+          <div className="farcaster-button-wrapper hover:scale-[1.02] transition-transform flex justify-center relative z-50">
+            {/* ON-SUCCESS HANDLERS:
+                Added router.refresh() to clear the Next.js cache so the dashboard
+                recognizes the new session immediately.
+            */}
             <SignInButton
-              onSuccess={(res) => {
-                console.log("Login successful:", res);
-                window.location.href = "/dashboard"; // Using window.location for a hard redirect if router fails
+              onSuccess={() => {
+                console.log("Farcaster Sign In Success");
+                router.refresh();
+                setTimeout(() => {
+                  window.location.href = "/dashboard";
+                }, 300);
+              }}
+              onStatusResponse={(status) => {
+                if (status.state === "completed") {
+                  console.log("Status completed, redirecting...");
+                  router.refresh();
+                  setTimeout(() => {
+                    window.location.href = "/dashboard";
+                  }, 300);
+                }
               }}
             />
           </div>
         </div>
       </div>
 
-      {/* PRODUCTION GUIDE SECTION */}
+      {/* 3. PRODUCTION GUIDE SECTION */}
       <div className="mt-12 w-full max-w-6xl px-6 border-t border-white/5 pt-10">
         <div className="mb-10 text-center md:text-left">
           <h2 className="text-[#b87209] text-[10px] font-black uppercase tracking-[0.4em] mb-4">
             Production Protocol
           </h2>
-          <h3 className="text-4xl md:text-5xl font-black uppercase italic tracking-tighter text-white">
+          <h3 className="text-4xl md:text-5xl font-black uppercase italic tracking-tighter text-white leading-tight">
             From Script to <span className="text-[#b87209]">Settlement</span>
           </h3>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="group space-y-4 p-6 bg-[#1d02cb]/5 border border-white/5 hover:border-[#b87209]/30 transition-all rounded-sm">
-            <div className="text-3xl font-black italic text-[#b87209]/20 group-hover:text-[#b87209]">
+            <div className="text-3xl font-black italic text-[#b87209]/20 group-hover:text-[#b87209] transition-colors">
               01
             </div>
             <h4 className="text-white font-bold uppercase tracking-[0.2em] text-[11px]">
@@ -106,7 +133,7 @@ export default function HomePage() {
           </div>
 
           <div className="group space-y-4 p-6 bg-[#1d02cb]/5 border border-white/5 hover:border-[#b87209]/30 transition-all rounded-sm">
-            <div className="text-3xl font-black italic text-[#b87209]/20 group-hover:text-[#b87209]">
+            <div className="text-3xl font-black italic text-[#b87209]/20 group-hover:text-[#b87209] transition-colors">
               02
             </div>
             <h4 className="text-white font-bold uppercase tracking-[0.2em] text-[11px]">
@@ -119,7 +146,7 @@ export default function HomePage() {
           </div>
 
           <div className="group space-y-4 p-6 bg-[#1d02cb]/5 border border-white/5 hover:border-[#b87209]/30 transition-all rounded-sm">
-            <div className="text-3xl font-black italic text-[#b87209]/20 group-hover:text-[#b87209]">
+            <div className="text-3xl font-black italic text-[#b87209]/20 group-hover:text-[#b87209] transition-colors">
               03
             </div>
             <h4 className="text-white font-bold uppercase tracking-[0.2em] text-[11px]">
@@ -141,7 +168,7 @@ export default function HomePage() {
             <p className="text-white text-[10px] leading-relaxed font-bold">
               Earn a{" "}
               <span className="underline italic">1% lifetime incentive</span> on
-              every trade.
+              every trade made by your referred crew.
             </p>
           </div>
         </div>
