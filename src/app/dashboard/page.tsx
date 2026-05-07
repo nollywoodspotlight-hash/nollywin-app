@@ -21,12 +21,17 @@ export default function Dashboard() {
   // Current Trade Status (Mocked for UI display)
   const [lifecycleState, setLifecycleState] = useState("ACTIVE");
 
-  // Single Wallet Enforcement
+  // Single Wallet Enforcement & Session Management
   useEffect(() => {
     if (!isConnected) {
       router.push("/");
     }
   }, [isConnected, router]);
+
+  const handleLogout = () => {
+    disconnect();
+    router.push("/");
+  };
 
   // Generate Unique Referral Link
   const referralLink = `https://nollywin.app/?ref=${address?.slice(0, 8)}`;
@@ -47,9 +52,17 @@ export default function Dashboard() {
           <h1 className="text-3xl font-black uppercase italic text-white tracking-tighter">
             Current Production
           </h1>
-          <p className="text-gray-500 text-xs uppercase tracking-widest font-bold">
-            Executive Producer: {address?.slice(0, 6)}...{address?.slice(-4)}
-          </p>
+          <div className="flex items-center gap-4">
+            <p className="text-gray-500 text-xs uppercase tracking-widest font-bold">
+              Executive Producer: {address?.slice(0, 6)}...{address?.slice(-4)}
+            </p>
+            <button
+              onClick={handleLogout}
+              className="text-[9px] font-black text-red-500 hover:text-white uppercase tracking-tighter border border-red-500/20 px-2 py-0.5 transition-colors"
+            >
+              Terminate Session (Logout)
+            </button>
+          </div>
         </div>
 
         {/* UNIQUE REFERRAL BOX */}
