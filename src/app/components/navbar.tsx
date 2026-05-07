@@ -1,8 +1,9 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useAccount } from "wagmi"; // To detect connection status
 import {
   ConnectWallet,
   Wallet,
@@ -13,6 +14,16 @@ import { Address, Avatar, Name, Identity } from "@coinbase/onchainkit/identity";
 
 export function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const { isConnected } = useAccount();
+
+  // AUTOMATIC REDIRECT LOGIC
+  // If the user connects and is currently on the home page, send them to dashboard
+  useEffect(() => {
+    if (isConnected && pathname === "/") {
+      router.push("/dashboard");
+    }
+  }, [isConnected, pathname, router]);
 
   const isActive = (path: string) => pathname === path;
 
@@ -80,7 +91,7 @@ export function Navbar() {
             About
           </Link>
 
-          {/* Action Area - FIXED CONNECT BUTTON */}
+          {/* Action Area */}
           <div className="pl-6 border-l border-white/10">
             <Wallet>
               <ConnectWallet className="relative group overflow-hidden bg-[#1d02cb] text-white px-8 py-2.5 text-[10px] font-black uppercase tracking-widest transition-all border border-[#b87209]/30 hover:border-[#b87209] rounded-none">
