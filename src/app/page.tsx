@@ -19,14 +19,15 @@ export default function HomePage() {
 
   /**
    * 1. AUTO-REDIRECT FOR EXISTING SESSIONS
-   * Added a 500ms delay to ensure the session is stable before moving.
+   * If a user is already logged in, we give the browser 800ms to stabilize
+   * before pushing to the dashboard to prevent the "bounce" issue.
    */
   useEffect(() => {
     if (mounted && (isConnected || isSuccess || data?.username)) {
-      console.log("Existing session detected, redirecting...");
+      console.log("Existing session detected, preparing redirect...");
       const timer = setTimeout(() => {
         router.push("/dashboard");
-      }, 500);
+      }, 800);
       return () => clearTimeout(timer);
     }
   }, [isConnected, isSuccess, data, router, mounted]);
@@ -81,25 +82,20 @@ export default function HomePage() {
           </div>
 
           <div className="farcaster-button-wrapper hover:scale-[1.02] transition-transform flex justify-center relative z-50">
-            {/* ON-SUCCESS HANDLERS:
-                Added router.refresh() to clear the Next.js cache so the dashboard
-                recognizes the new session immediately.
+            {/* NUCLEAR FIX: 
+                We use window.location.assign for a hard redirect. 
+                The 'status.state === "completed"' check serves as a safety net 
+                in case 'onSuccess' doesn't fire immediately.
             */}
             <SignInButton
               onSuccess={() => {
-                console.log("Farcaster Sign In Success");
-                router.refresh();
-                setTimeout(() => {
-                  window.location.href = "/dashboard";
-                }, 300);
+                console.log("Farcaster Success Callback");
+                window.location.assign("/dashboard");
               }}
-              onStatusResponse={(status) => {
+              onStatusResponse={(status: any) => {
                 if (status.state === "completed") {
-                  console.log("Status completed, redirecting...");
-                  router.refresh();
-                  setTimeout(() => {
-                    window.location.href = "/dashboard";
-                  }, 300);
+                  console.log("Farcaster Status Completed - Forcing Redirect");
+                  window.location.assign("/dashboard");
                 }
               }}
             />

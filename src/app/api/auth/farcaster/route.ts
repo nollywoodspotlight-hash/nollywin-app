@@ -4,16 +4,18 @@ import { NextRequest, NextResponse } from "next/server";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
+    const { message, signature, nonce } = body;
 
     const appClient = createAppClient({
       ethereum: viemConnector(),
     });
 
-    const verifyResult = await appClient.verifySignInMessage({
-      message: body.message,
-      signature: body.signature,
+    // We use a broad type here to stop TypeScript from flagging 'data' or 'error'
+    const verifyResult: any = await appClient.verifySignInMessage({
+      message,
+      signature,
       domain: "nollywin.app",
-      nonce: body.nonce,
+      nonce,
     });
 
     if (verifyResult.success) {
@@ -23,22 +25,17 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // TYPE-SAFE ERROR HANDLING
-    // We cast to 'any' here specifically to stop the TypeScript 'never' error
-    // while we extract the message for our logs.
-    const failureReason =
-      (verifyResult as any).error?.message || "Verification failed";
-
-    console.error("Farcaster Verification Failed:", failureReason);
-
     return NextResponse.json(
-      { success: false, error: failureReason },
+      {
+        success: false,
+        error: verifyResult.error?.message || "Verification failed",
+      },
       { status: 400 },
     );
-  } catch (error) {
-    console.error("Server Error during Farcaster Handshake:", error);
+  } catch (error: any) {
+    console.error("Farcaster API Error:", error);
     return NextResponse.json(
-      { success: false, error: "Internal Server Error" },
+      { success: false, error: error.message || "Internal Server Error" },
       { status: 500 },
     );
   }
