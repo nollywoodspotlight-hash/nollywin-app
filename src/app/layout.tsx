@@ -21,8 +21,12 @@ const geistMono = Geist_Mono({
 // PRODUCTION FARCASTER CONFIG
 const farcasterConfig = {
   rpcUrl: "https://mainnet.optimism.io",
-  domain: "nollywin.app",
-  siweUri: "https://nollywin.app/api/auth/siwe",
+  domain: process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL}`
+    : "http://localhost:3000",
+  siweUri: process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL}/api/auth/siwe`
+    : "/api/auth/siwe",
 };
 
 export default function RootLayout({
@@ -38,8 +42,6 @@ export default function RootLayout({
         <AuthKitProvider config={farcasterConfig}>
           <Providers>
             <LiveTicker />
-
-            {/* Background Layer */}
             <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
               <div
                 className="w-full h-full bg-cover bg-center opacity-40"
@@ -55,7 +57,6 @@ export default function RootLayout({
             </div>
 
             <Navbar />
-
             <main className="flex-grow max-w-7xl mx-auto w-full px-6 py-8 z-10 relative">
               {children}
             </main>

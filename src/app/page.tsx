@@ -9,10 +9,15 @@ import "@farcaster/auth-kit/styles.css";
 export default function HomePage() {
   const router = useRouter();
 
-  // Robust handler for Farcaster success/completion
-  const handleFarcasterAuth = useCallback(
+  /**
+   * SUCCESS HANDLER
+   * Specifically for Farcaster authentication.
+   * OnchainKit (Base) connections are handled by the global
+   * useEffect listener in Navbar.tsx.
+   */
+  const handleSuccess = useCallback(
     (res: any) => {
-      if (res?.status === "success" || res?.state === "completed") {
+      if (res?.status === "success") {
         router.push("/dashboard");
       }
     },
@@ -67,10 +72,7 @@ export default function HomePage() {
 
           {/* FARCASTER CONNECTION PATH */}
           <div className="farcaster-button-wrapper hover:scale-[1.02] transition-transform flex justify-center">
-            <SignInButton
-              onSuccess={handleFarcasterAuth}
-              onStatusResponse={handleFarcasterAuth}
-            />
+            <SignInButton onSuccess={handleSuccess} />
           </div>
         </div>
       </div>
@@ -99,7 +101,7 @@ export default function HomePage() {
               Cast Your Wallet
             </h4>
             <p className="text-gray-400 text-[10px] leading-relaxed font-medium">
-              Connect your Base wallet or Farcaster ID to secure your producer’s
+              Connect your Base wallet or Farcaster ID to secure your producer's
               pass.
             </p>
           </div>
