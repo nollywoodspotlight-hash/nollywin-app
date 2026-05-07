@@ -75,8 +75,15 @@ export default function HomePage() {
           </div>
 
           {/* FARCASTER CONNECTION PATH */}
-          <div className="farcaster-button-wrapper hover:scale-[1.02] transition-transform flex justify-center">
-            <SignInButton onSuccess={handleSuccess} />
+          <div className="farcaster-button-wrapper hover:scale-[1.02] transition-transform flex justify-center relative z-20">
+            <div style={{ pointerEvents: "auto" }}>
+              <SignInButton
+                onSuccess={handleSuccess}
+                onError={(error) =>
+                  console.error("Farcaster auth error:", error)
+                }
+              />
+            </div>
           </div>
         </div>
       </div>
