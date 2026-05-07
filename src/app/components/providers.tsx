@@ -45,12 +45,8 @@ export function Providers({ children }: { children: ReactNode }) {
           <AuthKitProvider
             config={{
               relay: "https://relay.farcaster.xyz",
-              domain: process.env.VERCEL_URL
-                ? `https://${process.env.VERCEL_URL}`
-                : "http://localhost:3000",
-              siweUri: process.env.VERCEL_URL
-                ? `https://${process.env.VERCEL_URL}/api/auth/siwe`
-                : "/api/auth/siwe",
+              domain: "https://nollywin.xyz",
+              siweUri: "https://nollywin.xyz/api/auth/siwe",
             }}
           >
             {children}

@@ -17,8 +17,12 @@ export default function HomePage() {
    */
   const handleSuccess = useCallback(
     (res: any) => {
-      if (res?.status === "success") {
+      console.log("Farcaster auth result:", res);
+      if (res?.status === "success" || res?.state === "completed") {
+        console.log("Redirecting to dashboard...");
         router.push("/dashboard");
+      } else {
+        console.log("Auth not successful:", res);
       }
     },
     [router],

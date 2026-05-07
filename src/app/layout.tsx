@@ -5,8 +5,6 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Navbar } from "./components/navbar";
 import { Providers } from "./components/providers";
-import { AuthKitProvider } from "@farcaster/auth-kit";
-import "@farcaster/auth-kit/styles.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -17,17 +15,6 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
-
-// PRODUCTION FARCASTER CONFIG
-const farcasterConfig = {
-  rpcUrl: "https://mainnet.optimism.io",
-  domain: process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : "http://localhost:3000",
-  siweUri: process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}/api/auth/siwe`
-    : "/api/auth/siwe",
-};
 
 export default function RootLayout({
   children,
@@ -50,8 +37,7 @@ export default function RootLayout({
                   maskImage:
                     "radial-gradient(circle at center, black 20%, transparent 80%)",
                   WebkitMaskImage:
-                    "radial-gradient(circle at center, black 20%, transparent 80%)",
-                }}
+              }}
               />
               <div className="absolute inset-0 bg-black/60" />
             </div>
@@ -66,7 +52,6 @@ export default function RootLayout({
             </footer>
           </Providers>
         </AuthKitProvider>
-      </body>
-    </html>
+      html>
   );
 }
