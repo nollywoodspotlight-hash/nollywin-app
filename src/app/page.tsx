@@ -1,13 +1,11 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { SignInButton, useSignIn } from "@farcaster/auth-kit";
 import { ConnectWallet, Wallet } from "@coinbase/onchainkit/wallet";
 import "@farcaster/auth-kit/styles.css";
 
 export default function HomePage() {
-  const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
 
@@ -23,23 +21,36 @@ export default function HomePage() {
     setMounted(true);
   }, []);
 
-  // 2. Centralized Redirect Logic
+  // 2. Centralized Hard Redirect Logic
   const handleRedirect = () => {
     if (isRedirecting) return;
     setIsRedirecting(true);
-    console.log("Redirecting to Dashboard...");
-    window.location.assign("/dashboard");
+    console.log("NollyWin Watchdog: Session Found. Executing Hard Redirect...");
+
+    // Using .href forces the browser to reload the session context entirely
+    window.location.href = "/dashboard";
   };
 
-  // 3. Listener for "Silent" Success
+  /**
+   * 3. THE WATCHDOG INTERVAL
+   * If you are showing as "logged in" but didn't redirect, this interval
+   * catches that state and forces the move every 1000ms.
+   */
   useEffect(() => {
-    if (
-      mounted &&
-      (isSuccess || isConnected || data?.username) &&
-      !isRedirecting
-    ) {
-      handleRedirect();
-    }
+    if (!mounted) return;
+
+    const checkSession = () => {
+      if ((isSuccess || isConnected || data?.username) && !isRedirecting) {
+        handleRedirect();
+      }
+    };
+
+    // Immediate check
+    checkSession();
+
+    // Heartbeat check (catches lags in Farcaster provider state)
+    const interval = setInterval(checkSession, 1000);
+    return () => clearInterval(interval);
   }, [isSuccess, isConnected, data, mounted, isRedirecting]);
 
   if (!mounted) return <div className="min-h-screen bg-black" />;
@@ -77,7 +88,7 @@ export default function HomePage() {
           <div className="text-center py-10">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#b87209] mx-auto mb-4"></div>
             <p className="text-[#b87209] font-black uppercase text-[10px] tracking-widest">
-              Roll Credits... Entering Set
+              Opening Set... Verifying Credentials
             </p>
           </div>
         ) : (
@@ -106,7 +117,7 @@ export default function HomePage() {
         )}
       </div>
 
-      {/* 3. PRODUCTION GUIDE SECTION (RESTORED) */}
+      {/* 3. PRODUCTION GUIDE SECTION */}
       <div className="mt-24 w-full max-w-6xl px-6 border-t border-white/5 pt-10 relative z-10">
         <div className="mb-10 text-center md:text-left">
           <h2 className="text-[#b87209] text-[10px] font-black uppercase tracking-[0.4em] mb-4">
