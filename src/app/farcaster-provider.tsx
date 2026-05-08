@@ -2,26 +2,33 @@
 
 import { AuthKitProvider } from "@farcaster/auth-kit";
 import "@farcaster/auth-kit/styles.css";
-import { useMemo } from "react";
+import { useMemo, useEffect, useState } from "react";
 
 export function FarcasterProvider({ children }: { children: React.ReactNode }) {
-  const config = useMemo(() => {
-    // 1. Prioritize the Vercel Environment Variable we added
-    // 2. Clean it to ensure no 'https://' is in the 'domain' field
-    const rawUrl = process.env.NEXT_PUBLIC_URL || "nollywin-app.vercel.app";
-    const cleanDomain = rawUrl.replace(/^https?:\/\//, "");
+  // Use state to track if we are in the browser
+  const [mounted, setMounted] = useState(false);
 
-    // 3. Construct the full SIWE URI
-    const protocol = cleanDomain.includes("localhost") ? "http" : "https";
-    const siweUri = `${protocol}://${cleanDomain}/api/auth/farcaster`;
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const config = useMemo(() => {
+    // We prioritize the Vercel domain, but fallback to window host if available
+    const domain = "nollywin-app.vercel.app";
 
     return {
       rpcUrl: "https://mainnet.optimism.io",
-      domain: cleanDomain,
-      siweUri: siweUri,
+      domain: domain,
+      siweUri: `https://${domain}/api/auth/farcaster`,
       relay: "https://relay.farcaster.xyz",
     };
   }, []);
+
+  // If we haven't mounted yet, render the children without the provider
+  // to prevent the "unclickable" button state during page load.
+  if (!mounted) {
+    return <>{children}</>;
+  }
 
   return <AuthKitProvider config={config}>{children}</AuthKitProvider>;
 }

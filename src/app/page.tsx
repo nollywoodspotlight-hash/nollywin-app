@@ -10,7 +10,7 @@ export default function HomePage() {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
 
-  // Destructure for checking existing login state
+  // Initialize Farcaster sign-in hook
   const { isSuccess, isConnected, data } = useSignIn({});
 
   useEffect(() => {
@@ -18,13 +18,12 @@ export default function HomePage() {
   }, []);
 
   /**
-   * 1. AUTO-REDIRECT FOR EXISTING SESSIONS
-   * If a user is already logged in, we give the browser 800ms to stabilize
-   * before pushing to the dashboard to prevent the "bounce" issue.
+   * AUTO-REDIRECT FOR EXISTING SESSIONS
+   * Prevents the "bounce" issue by ensuring the client is stable before pushing to dashboard.
    */
   useEffect(() => {
     if (mounted && (isConnected || isSuccess || data?.username)) {
-      console.log("Existing session detected, preparing redirect...");
+      console.log("Existing NollyWin session detected. Redirecting...");
       const timer = setTimeout(() => {
         router.push("/dashboard");
       }, 800);
@@ -32,12 +31,15 @@ export default function HomePage() {
     }
   }, [isConnected, isSuccess, data, router, mounted]);
 
-  if (!mounted) return null;
+  // Prevent Hydration mismatch - keep the initial render consistent
+  if (!mounted) {
+    return <div className="min-h-screen bg-black" />;
+  }
 
   return (
-    <div className="flex flex-col items-center pt-10 md:pt-16 pb-32">
+    <div className="flex flex-col items-center pt-10 md:pt-16 pb-32 min-h-screen bg-black">
       {/* 1. HERO SECTION */}
-      <div className="text-center space-y-6 max-w-4xl px-4">
+      <div className="text-center space-y-6 max-w-4xl px-4 relative z-10">
         <h2 className="text-[#b87209] text-xs font-black uppercase tracking-[0.4em] animate-pulse">
           Now Showing: Onchain Automation
         </h2>
@@ -58,7 +60,7 @@ export default function HomePage() {
       </div>
 
       {/* 2. DUAL AUTH PORTAL */}
-      <div className="mt-12 w-full max-w-sm bg-black/40 border border-[#b87209]/20 p-8 rounded-sm backdrop-blur-md shadow-2xl relative z-50">
+      <div className="mt-12 w-full max-w-sm bg-black/60 border border-[#b87209]/20 p-8 rounded-sm backdrop-blur-md shadow-2xl relative z-40">
         <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#b87209] text-black text-[9px] font-black px-4 py-1 uppercase tracking-widest whitespace-nowrap">
           Executive Access
         </div>
@@ -81,20 +83,16 @@ export default function HomePage() {
             <div className="h-[1px] bg-white/10 flex-grow" />
           </div>
 
-          <div className="farcaster-button-wrapper hover:scale-[1.02] transition-transform flex justify-center relative z-50">
-            {/* NUCLEAR FIX: 
-                We use window.location.assign for a hard redirect. 
-                The 'status.state === "completed"' check serves as a safety net 
-                in case 'onSuccess' doesn't fire immediately.
-            */}
+          {/* FIX: Elevated z-index and explicit pointer events to prevent "unclickable" state */}
+          <div className="farcaster-button-wrapper hover:scale-[1.02] transition-transform flex justify-center relative z-[100] pointer-events-auto">
             <SignInButton
               onSuccess={() => {
-                console.log("Farcaster Success Callback");
+                console.log("Farcaster Success Callback Triggered");
                 window.location.assign("/dashboard");
               }}
               onStatusResponse={(status: any) => {
                 if (status.state === "completed") {
-                  console.log("Farcaster Status Completed - Forcing Redirect");
+                  console.log("Farcaster Auth Complete - Forcing UI Update");
                   window.location.assign("/dashboard");
                 }
               }}
@@ -104,7 +102,7 @@ export default function HomePage() {
       </div>
 
       {/* 3. PRODUCTION GUIDE SECTION */}
-      <div className="mt-12 w-full max-w-6xl px-6 border-t border-white/5 pt-10">
+      <div className="mt-12 w-full max-w-6xl px-6 border-t border-white/5 pt-10 relative z-10">
         <div className="mb-10 text-center md:text-left">
           <h2 className="text-[#b87209] text-[10px] font-black uppercase tracking-[0.4em] mb-4">
             Production Protocol
