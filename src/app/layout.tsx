@@ -5,7 +5,7 @@ import "./globals.css";
 import { Navbar } from "./components/navbar";
 import { Providers } from "./components/providers";
 import { FarcasterProvider } from "./farcaster-provider";
-import { MiniAppReady } from "./components/mini-app-ready"; // ← New component
+import { MiniAppReady } from "./components/mini-app-ready"; // ← This line must exist
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({
@@ -53,7 +53,7 @@ export default function RootLayout({
               © 2026 NollyWin App • Built on Base Network
             </footer>
 
-            {/* Mini App Ready Signal */}
+            {/* Important for Farcaster Mini App */}
             <MiniAppReady />
           </FarcasterProvider>
         </Providers>

@@ -32,27 +32,34 @@ export default function Dashboard() {
 
   useEffect(() => {
     const hasAuth =
-      isWagmiConnected || isFarcasterConnected || isSuccess || isAuthenticated;
+      isWagmiConnected ||
+      isFarcasterConnected ||
+      isSuccess ||
+      isAuthenticated ||
+      !!profile ||
+      !!farcasterData;
 
-    console.log("Auth check:", {
+    console.log("🔍 Dashboard Auth Check:", {
       isWagmiConnected,
       isFarcasterConnected,
       isSuccess,
       isAuthenticated,
+      hasProfile: !!profile,
+      hasFarcasterData: !!farcasterData,
+      profileUsername: profile?.username,
+      farcasterUsername: farcasterData?.username,
       hasAuth,
     });
 
     if (hasAuth) {
       setIsCheckingAuth(false);
-      console.log("✅ Auth successful - showing dashboard");
+      console.log("✅ Auth confirmed - rendering dashboard");
     } else {
-      // Give more time for Farcaster auth to complete (especially in Warpcast)
+      // Longer timeout for Warpcast / Mini App
       const timeout = setTimeout(() => {
-        if (!hasAuth) {
-          console.log("⏰ No auth detected after timeout → redirecting");
-          router.push("/");
-        }
-      }, 4500); // Increased timeout
+        console.log("⏰ No auth detected after 6s → redirecting to home");
+        router.push("/");
+      }, 6000);
 
       return () => clearTimeout(timeout);
     }
@@ -61,6 +68,8 @@ export default function Dashboard() {
     isFarcasterConnected,
     isSuccess,
     isAuthenticated,
+    profile,
+    farcasterData,
     router,
   ]);
 
@@ -76,15 +85,15 @@ export default function Dashboard() {
 
   const referralLink = `https://nollywin.app/?ref=${userIdentifier}`;
 
-  // Loading screen
+  // Loading Screen
   if (isCheckingAuth) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[80vh] bg-black text-white">
         <div className="w-12 h-12 border-2 border-[#b87209] border-t-transparent rounded-full animate-spin mb-4" />
         <p className="text-[#b87209] font-black uppercase italic tracking-widest text-[10px] animate-pulse">
-          Reviewing Production Credentials...
+          Connecting to NollyWin Studio...
         </p>
-        <p className="text-[10px] text-gray-500 mt-6">
+        <p className="text-[10px] text-gray-500 mt-4">
           This may take a few seconds in Warpcast
         </p>
       </div>
@@ -138,17 +147,122 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Rest of your dashboard UI remains the same */}
-        {/* ... (Main content grid unchanged) ... */}
+        {/* --- MAIN CONTENT GRID --- */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
           {/* Left Column: Strategy Input */}
           <div className="lg:col-span-1 bg-black/40 border border-white/10 p-8 rounded-sm space-y-6 relative overflow-hidden">
-            {/* ... your existing form ... */}
+            <div className="absolute top-0 right-0 w-16 h-16 bg-[#b87209]/5 -rotate-45 translate-x-8 -translate-y-8" />
+            <h2 className="text-white font-black uppercase italic tracking-widest text-sm border-b border-white/5 pb-4">
+              The Script (Strategy)
+            </h2>
+
+            <div className="space-y-5">
+              <div>
+                <label className="block text-[10px] text-gray-500 uppercase font-black mb-2">
+                  Target Memecoin
+                </label>
+                <input
+                  type="text"
+                  placeholder="$TICKER"
+                  className="w-full bg-white/5 border border-white/10 p-3 text-white outline-none focus:border-[#b87209] transition-all"
+                  onChange={(e) =>
+                    setFormData({ ...formData, ticker: e.target.value })
+                  }
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] text-gray-500 uppercase font-black mb-2">
+                    DCA (ETH)
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="0.01"
+                    className="w-full bg-white/5 border border-white/10 p-3 text-white outline-none focus:border-[#b87209]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] text-gray-500 uppercase font-black mb-2">
+                    Freq (Hrs)
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="1"
+                    className="w-full bg-white/5 border border-white/10 p-3 text-white outline-none focus:border-[#b87209]"
+                  />
+                </div>
+              </div>
+
+              <button className="w-full bg-[#b87209] text-black font-black py-4 uppercase italic tracking-tighter hover:bg-white transition-all shadow-[0_0_20px_rgba(184,114,9,0.2)]">
+                Start Production
+              </button>
+            </div>
           </div>
 
           {/* Right Column: Live Monitor */}
           <div className="lg:col-span-2 bg-[#1d02cb]/5 border border-white/10 p-8 rounded-sm flex flex-col justify-between relative">
-            {/* ... your existing monitor ... */}
+            <div>
+              <div className="flex justify-between items-center mb-10">
+                <h2 className="text-white font-black uppercase italic tracking-widest text-sm">
+                  Live Feed
+                </h2>
+                <div className="flex gap-2">
+                  <div className="px-3 py-1 text-[8px] font-black border bg-[#b87209] border-[#b87209] text-black shadow-[0_0_10px_#b87209]">
+                    ACTIVE
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-8">
+                <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                  <span className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">
+                    Active Script
+                  </span>
+                  <span className="text-white font-mono text-xs">
+                    {formData.ticker || "AWAITING INPUT..."}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-3 gap-8">
+                  <div>
+                    <p className="text-gray-500 text-[9px] uppercase font-black mb-1">
+                      Cost Basis
+                    </p>
+                    <p className="text-2xl font-black italic">
+                      0.00{" "}
+                      <span className="text-xs not-italic text-gray-600">
+                        ETH
+                      </span>
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500 text-[9px] uppercase font-black mb-1">
+                      Current Value
+                    </p>
+                    <p className="text-2xl font-black italic">
+                      0.00{" "}
+                      <span className="text-xs not-italic text-gray-600">
+                        ETH
+                      </span>
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500 text-[9px] uppercase font-black mb-1">
+                      PnL (%)
+                    </p>
+                    <p className="text-2xl font-black italic text-[#b87209]">
+                      +0.00%
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-12 p-4 bg-black/40 border-l-2 border-[#b87209] text-[10px] text-gray-500 italic flex items-center gap-3">
+              <span className="w-2 h-2 bg-[#b87209] rounded-full animate-ping" />
+              Production Note: 3% royalty applies only to realized profits.
+            </div>
           </div>
         </div>
       </div>
