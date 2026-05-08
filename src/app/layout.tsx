@@ -4,7 +4,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Navbar } from "./components/navbar";
 import { Providers } from "./components/providers";
-import { FarcasterProvider } from "./farcaster-provider"; // We will create this next
+import { FarcasterProvider } from "./farcaster-provider";
+import { MiniAppReady } from "./components/mini-app-ready"; // ← New component
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({
@@ -51,6 +52,9 @@ export default function RootLayout({
             <footer className="p-8 text-center text-gray-500 text-xs border-t border-white/5 z-10 bg-black/40 backdrop-blur-md relative">
               © 2026 NollyWin App • Built on Base Network
             </footer>
+
+            {/* Mini App Ready Signal */}
+            <MiniAppReady />
           </FarcasterProvider>
         </Providers>
       </body>
