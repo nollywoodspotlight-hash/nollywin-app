@@ -9,35 +9,43 @@ import "@farcaster/auth-kit/styles.css";
 export default function HomePage() {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
-  // Initialize Farcaster sign-in hook
-  const { isSuccess, isConnected, data } = useSignIn({});
+  // 1. Initialize the Farcaster Hook
+  const { isSuccess, isConnected, data } = useSignIn({
+    onSuccess: (res) => {
+      console.log("Farcaster Sign-in Success:", res);
+      handleRedirect();
+    },
+  });
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  /**
-   * AUTO-REDIRECT FOR EXISTING SESSIONS
-   * Prevents the "bounce" issue by ensuring the client is stable before pushing to dashboard.
-   */
-  useEffect(() => {
-    if (mounted && (isConnected || isSuccess || data?.username)) {
-      console.log("Existing NollyWin session detected. Redirecting...");
-      const timer = setTimeout(() => {
-        router.push("/dashboard");
-      }, 800);
-      return () => clearTimeout(timer);
-    }
-  }, [isConnected, isSuccess, data, router, mounted]);
+  // 2. Centralized Redirect Logic
+  const handleRedirect = () => {
+    if (isRedirecting) return;
+    setIsRedirecting(true);
+    console.log("Redirecting to Dashboard...");
+    window.location.assign("/dashboard");
+  };
 
-  // Prevent Hydration mismatch - keep the initial render consistent
-  if (!mounted) {
-    return <div className="min-h-screen bg-black" />;
-  }
+  // 3. Listener for "Silent" Success
+  useEffect(() => {
+    if (
+      mounted &&
+      (isSuccess || isConnected || data?.username) &&
+      !isRedirecting
+    ) {
+      handleRedirect();
+    }
+  }, [isSuccess, isConnected, data, mounted, isRedirecting]);
+
+  if (!mounted) return <div className="min-h-screen bg-black" />;
 
   return (
-    <div className="flex flex-col items-center pt-10 md:pt-16 pb-32 min-h-screen bg-black">
+    <div className="flex flex-col items-center pt-10 md:pt-16 pb-32 min-h-screen bg-black text-white selection:bg-[#b87209] selection:text-black">
       {/* 1. HERO SECTION */}
       <div className="text-center space-y-6 max-w-4xl px-4 relative z-10">
         <h2 className="text-[#b87209] text-xs font-black uppercase tracking-[0.4em] animate-pulse">
@@ -60,49 +68,46 @@ export default function HomePage() {
       </div>
 
       {/* 2. DUAL AUTH PORTAL */}
-      <div className="mt-12 w-full max-w-sm bg-black/60 border border-[#b87209]/20 p-8 rounded-sm backdrop-blur-md shadow-2xl relative z-40">
+      <div className="mt-12 w-full max-w-sm bg-black/40 border border-[#b87209]/20 p-8 rounded-sm backdrop-blur-md shadow-2xl relative z-50">
         <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#b87209] text-black text-[9px] font-black px-4 py-1 uppercase tracking-widest whitespace-nowrap">
           Executive Access
         </div>
 
-        <div className="space-y-4">
-          <div className="relative">
-            <Wallet>
-              <ConnectWallet className="w-full bg-white text-black font-black py-4 uppercase tracking-tighter flex items-center justify-center space-x-3 hover:bg-gray-200 transition-all shadow-lg group rounded-none">
-                <div className="w-5 h-5 bg-[#0052FF] rounded-full group-hover:scale-110 transition-transform" />
-                <span>Connect Wallet</span>
-              </ConnectWallet>
-            </Wallet>
+        {isRedirecting ? (
+          <div className="text-center py-10">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#b87209] mx-auto mb-4"></div>
+            <p className="text-[#b87209] font-black uppercase text-[10px] tracking-widest">
+              Roll Credits... Entering Set
+            </p>
           </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="relative">
+              <Wallet>
+                <ConnectWallet className="w-full bg-white text-black font-black py-4 uppercase tracking-tighter flex items-center justify-center space-x-3 hover:bg-gray-200 transition-all shadow-lg group rounded-none">
+                  <div className="w-5 h-5 bg-[#0052FF] rounded-full group-hover:scale-110 transition-transform" />
+                  <span>Connect Wallet</span>
+                </ConnectWallet>
+              </Wallet>
+            </div>
 
-          <div className="flex items-center space-x-2 py-2">
-            <div className="h-[1px] bg-white/10 flex-grow" />
-            <span className="text-gray-600 text-[9px] font-bold uppercase tracking-widest">
-              or
-            </span>
-            <div className="h-[1px] bg-white/10 flex-grow" />
-          </div>
+            <div className="flex items-center space-x-2 py-2">
+              <div className="h-[1px] bg-white/10 flex-grow" />
+              <span className="text-gray-600 text-[9px] font-bold uppercase tracking-widest">
+                or
+              </span>
+              <div className="h-[1px] bg-white/10 flex-grow" />
+            </div>
 
-          {/* FIX: Elevated z-index and explicit pointer events to prevent "unclickable" state */}
-          <div className="farcaster-button-wrapper hover:scale-[1.02] transition-transform flex justify-center relative z-[100] pointer-events-auto">
-            <SignInButton
-              onSuccess={() => {
-                console.log("Farcaster Success Callback Triggered");
-                window.location.assign("/dashboard");
-              }}
-              onStatusResponse={(status: any) => {
-                if (status.state === "completed") {
-                  console.log("Farcaster Auth Complete - Forcing UI Update");
-                  window.location.assign("/dashboard");
-                }
-              }}
-            />
+            <div className="farcaster-button-wrapper hover:scale-[1.02] transition-transform flex justify-center relative z-[100] pointer-events-auto">
+              <SignInButton />
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
-      {/* 3. PRODUCTION GUIDE SECTION */}
-      <div className="mt-12 w-full max-w-6xl px-6 border-t border-white/5 pt-10 relative z-10">
+      {/* 3. PRODUCTION GUIDE SECTION (RESTORED) */}
+      <div className="mt-24 w-full max-w-6xl px-6 border-t border-white/5 pt-10 relative z-10">
         <div className="mb-10 text-center md:text-left">
           <h2 className="text-[#b87209] text-[10px] font-black uppercase tracking-[0.4em] mb-4">
             Production Protocol
