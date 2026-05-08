@@ -9,9 +9,17 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { message, signature, nonce } = body;
 
-    // Dynamically get the domain from the request headers
-    // This handles localhost, nollywin-app.vercel.app, and nollywin.app automatically
-    const host = req.headers.get("host") || "nollywin-app.vercel.app";
+    // 1. Detect the host accurately.
+    // Vercel uses x-forwarded-host to pass the actual domain (nollywin-app.vercel.app)
+    const host =
+      req.headers.get("x-forwarded-host") ||
+      req.headers.get("host") ||
+      "nollywin-app.vercel.app";
+
+    // 2. Clean the host.
+    // SIWE/Farcaster verification is strict. We strip the protocol (http/https)
+    // and any port numbers (like :3000) to ensure the domain matches the frontend.
+    const cleanHost = host.split(":")[0];
 
     const appClient = createAppClient({
       ethereum: viemConnector(),
@@ -20,13 +28,13 @@ export async function POST(req: NextRequest) {
     const verifyResult: any = await appClient.verifySignInMessage({
       message,
       signature,
-      domain: host, // Matches the domain detected by the frontend
+      domain: cleanHost,
       nonce,
     });
 
     if (verifyResult.success) {
       console.log(
-        `Verification Success for ${verifyResult.data?.username} on ${host}`,
+        `Verification Success for ${verifyResult.data?.username} on ${cleanHost}`,
       );
       return NextResponse.json({
         success: true,
