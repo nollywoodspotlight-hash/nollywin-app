@@ -5,17 +5,17 @@ import sdk from "@farcaster/frame-sdk";
 
 export function MiniAppReady() {
   useEffect(() => {
-    const makeReady = async () => {
+    const init = async () => {
       try {
-        console.log("📡 Attempting sdk.actions.ready()...");
+        console.log("📡 Calling sdk.actions.ready()...");
         await sdk.actions.ready();
-        console.log("✅ sdk.actions.ready() called SUCCESSFULLY");
-      } catch (err) {
-        console.error("❌ ready() failed:", err);
+        console.log("✅ sdk.actions.ready() SUCCESS — App should now display");
+      } catch (error) {
+        console.error("❌ sdk.actions.ready() FAILED:", error);
       }
     };
 
-    makeReady();
+    init();
   }, []);
 
   return null;

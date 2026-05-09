@@ -1,24 +1,17 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { SignInButton } from "@farcaster/auth-kit";
-import {
-  ConnectWallet,
-  Wallet,
-  WalletDropdown,
-  WalletDropdownDisconnect,
-} from "@coinbase/onchainkit/wallet";
-import {
-  Address,
-  Avatar,
-  Name,
-  Identity,
-  EthBalance,
-} from "@coinbase/onchainkit/identity";
+import { useAccount, useConnect, useDisconnect } from "wagmi";
 import { useReferralSignature } from "@/hooks/useReferralSignature";
 
 export default function AuthSection() {
+  const { address, isConnected } = useAccount();
+  const { connect, connectors } = useConnect();
+  const { disconnect } = useDisconnect();
   const { createSignature } = useReferralSignature();
+
+  const [rpcStatus, setRpcStatus] = useState("checking");
 
   useEffect(() => {
     const checkRPC = async () => {
@@ -36,26 +29,25 @@ export default function AuthSection() {
             }),
           },
         );
-        console.log(
-          "Alchemy RPC Status Check:",
-          response.status === 200 ? "Connected ✅" : "Error ❌",
-        );
+
+        setRpcStatus(response.status === 200 ? "connected" : "error");
       } catch (err) {
-        console.error("Alchemy RPC unreachable. Check DNS/VPN/Allowlist:", err);
+        console.error(err);
+        setRpcStatus("error");
       }
     };
+
     checkRPC();
   }, []);
 
   const handleFarcasterSuccess = async (res: any) => {
-    console.log("Farcaster Linked successfully:", res);
+    console.log("Farcaster linked:", res);
+
     try {
       const signature = await createSignature(12345);
-      if (signature) {
-        console.log("Referral Signature secured:", signature);
-      }
+      console.log("Referral signature:", signature);
     } catch (err) {
-      console.error("Signature process interrupted:", err);
+      console.error("Signature error:", err);
     }
   };
 
@@ -70,38 +62,36 @@ export default function AuthSection() {
         </p>
       </div>
 
-      <div className="space-y-6">
-        <div className="space-y-3">
-          <p className="text-[10px] font-bold text-blue-500 uppercase tracking-widest ml-1">
-            01. Connect Base Wallet
-          </p>
-          {/* 
-              FIX: Wallet uses the OnchainKit dropdown. 
-              Ensure you click the button AFTER connecting to see 'Disconnect'.
-          */}
-          <Wallet>
-            <ConnectWallet className="w-full bg-blue-600 hover:bg-blue-500 text-white rounded-xl py-7 shadow-lg shadow-blue-900/20 transition-all border-none font-bold">
-              <Avatar className="h-6 w-6" />
-              <Name />
-            </ConnectWallet>
-            <WalletDropdown className="z-50 bg-zinc-900 border border-zinc-800">
-              <Identity className="px-4 pt-3 pb-2" hasCopyAddressOnClick>
-                <Address className="text-white" />
-                <EthBalance className="text-zinc-400" />
-              </Identity>
-              <WalletDropdownDisconnect className="hover:bg-red-500/10 text-red-500 font-bold" />
-            </WalletDropdown>
-          </Wallet>
-        </div>
+      {/* WALLET CONNECTION (WAGMI) */}
+      <div className="space-y-3">
+        <p className="text-[10px] font-bold text-blue-500 uppercase tracking-widest ml-1">
+          01. Connect Wallet
+        </p>
 
-        <div className="space-y-3">
-          <p className="text-[10px] font-bold text-purple-500 uppercase tracking-widest ml-1">
-            02. Link Farcaster Profile
-          </p>
-          <div className="w-full">
-            <SignInButton onSuccess={handleFarcasterSuccess} />
-          </div>
-        </div>
+        {isConnected ? (
+          <button
+            onClick={() => disconnect()}
+            className="w-full bg-red-600 hover:bg-red-500 text-white rounded-xl py-4 font-bold"
+          >
+            Disconnect {address?.slice(0, 6)}...
+          </button>
+        ) : (
+          <button
+            onClick={() => connect({ connector: connectors[0] })}
+            className="w-full bg-blue-600 hover:bg-blue-500 text-white rounded-xl py-4 font-bold"
+          >
+            Connect Wallet
+          </button>
+        )}
+      </div>
+
+      {/* FARCASTER AUTH */}
+      <div className="space-y-3">
+        <p className="text-[10px] font-bold text-purple-500 uppercase tracking-widest ml-1">
+          02. Link Farcaster Profile
+        </p>
+
+        <SignInButton onSuccess={handleFarcasterSuccess} />
       </div>
 
       <p className="text-[9px] text-zinc-500 text-center leading-relaxed px-4">
@@ -109,6 +99,10 @@ export default function AuthSection() {
         <span className="text-zinc-300">1% Referral Reward</span> and enable
         gasless trading via the{" "}
         <span className="text-zinc-300">Principal Shield</span>.
+      </p>
+
+      <p className="text-[10px] text-zinc-600 text-center">
+        RPC Status: {rpcStatus}
       </p>
     </div>
   );
