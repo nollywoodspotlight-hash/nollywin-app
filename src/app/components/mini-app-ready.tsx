@@ -1,22 +1,23 @@
 "use client";
 
 import { useEffect } from "react";
-import sdk from "@farcaster/frame-sdk"; // Make sure you're using frame-sdk
+import sdk from "@farcaster/frame-sdk";
 
 export function MiniAppReady() {
   useEffect(() => {
-    const initialize = async () => {
+    const init = async () => {
       try {
-        console.log("📡 Initializing Farcaster Mini App...");
+        console.log("📡 Calling sdk.actions.ready()...");
         await sdk.actions.ready();
-        console.log("✅ sdk.actions.ready() called successfully");
+        console.log(
+          "✅ sdk.actions.ready() SUCCESS — Splash screen should be gone",
+        );
       } catch (error) {
-        console.error("❌ Failed to call sdk.actions.ready():", error);
+        console.error("❌ sdk.actions.ready() failed:", error);
       }
     };
 
-    // Call it as soon as possible
-    initialize();
+    init();
   }, []);
 
   return null;

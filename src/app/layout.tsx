@@ -1,5 +1,4 @@
 import React from "react";
-import { useEffect } from "react"; // ← Separate import for useEffect
 import LiveTicker from "./components/liveticker";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
@@ -24,21 +23,6 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Early ready() call for Farcaster
-  useEffect(() => {
-    const init = async () => {
-      try {
-        console.log("📡 Calling sdk.actions.ready() from layout...");
-        const sdk = (await import("@farcaster/frame-sdk")).default;
-        await sdk.actions.ready();
-        console.log("✅ sdk.actions.ready() SUCCESS");
-      } catch (error) {
-        console.error("❌ ready() failed:", error);
-      }
-    };
-    init();
-  }, []);
-
   return (
     <html lang="en" className="h-full antialiased">
       <body
