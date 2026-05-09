@@ -1,4 +1,5 @@
-import React, { useEffect } from "react";
+import React from "react";
+import { useEffect } from "react"; // ← Separate import for useEffect
 import LiveTicker from "./components/liveticker";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
@@ -6,7 +7,6 @@ import { Navbar } from "./components/navbar";
 import { Providers } from "./components/providers";
 import { FarcasterProvider } from "./farcaster-provider";
 import { MiniAppReady } from "./components/mini-app-ready";
-import sdk from "@farcaster/frame-sdk";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({
@@ -24,11 +24,12 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Early ready() call for Farcaster Developer Preview
+  // Early ready() call for Farcaster
   useEffect(() => {
     const init = async () => {
       try {
         console.log("📡 Calling sdk.actions.ready() from layout...");
+        const sdk = (await import("@farcaster/frame-sdk")).default;
         await sdk.actions.ready();
         console.log("✅ sdk.actions.ready() SUCCESS");
       } catch (error) {
@@ -68,7 +69,6 @@ export default function RootLayout({
               © 2026 NollyWin App • Built on Base Network
             </footer>
 
-            {/* Keep your original MiniAppReady too */}
             <MiniAppReady />
           </FarcasterProvider>
         </Providers>
