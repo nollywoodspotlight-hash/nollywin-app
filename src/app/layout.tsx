@@ -1,11 +1,12 @@
-import React from "react";
+import React, { useEffect } from "react";
 import LiveTicker from "./components/liveticker";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Navbar } from "./components/navbar";
 import { Providers } from "./components/providers";
 import { FarcasterProvider } from "./farcaster-provider";
-import { MiniAppReady } from "./components/mini-app-ready"; // ← This line must exist
+import { MiniAppReady } from "./components/mini-app-ready";
+import sdk from "@farcaster/frame-sdk";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({
@@ -23,6 +24,20 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // Early ready() call for Farcaster Developer Preview
+  useEffect(() => {
+    const init = async () => {
+      try {
+        console.log("📡 Calling sdk.actions.ready() from layout...");
+        await sdk.actions.ready();
+        console.log("✅ sdk.actions.ready() SUCCESS");
+      } catch (error) {
+        console.error("❌ ready() failed:", error);
+      }
+    };
+    init();
+  }, []);
+
   return (
     <html lang="en" className="h-full antialiased">
       <body
@@ -53,7 +68,7 @@ export default function RootLayout({
               © 2026 NollyWin App • Built on Base Network
             </footer>
 
-            {/* Important for Farcaster Mini App */}
+            {/* Keep your original MiniAppReady too */}
             <MiniAppReady />
           </FarcasterProvider>
         </Providers>
