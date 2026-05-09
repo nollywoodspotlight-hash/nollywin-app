@@ -3,17 +3,19 @@
 import React, { useEffect, useState } from "react";
 import { SignInButton, useSignIn } from "@farcaster/auth-kit";
 import { ConnectWallet, Wallet } from "@coinbase/onchainkit/wallet";
+import { useRouter } from "next/navigation";
 import "@farcaster/auth-kit/styles.css";
 
 export default function HomePage() {
+  const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
 
-  // 1. Initialize the Farcaster Hook
+  // Farcaster Sign In Hook
   const { isSuccess, isConnected, data } = useSignIn({
     onSuccess: (res) => {
-      console.log("Farcaster Sign-in Success:", res);
-      handleRedirect();
+      console.log("✅ Farcaster Sign-in Success:", res);
+      triggerRedirect();
     },
   });
 
@@ -21,39 +23,29 @@ export default function HomePage() {
     setMounted(true);
   }, []);
 
-  // 2. Centralized Hard Redirect Logic
-  const handleRedirect = () => {
+  // Centralized redirect function
+  const triggerRedirect = () => {
     if (isRedirecting) return;
     setIsRedirecting(true);
-    console.log("NollyWin Watchdog: Session Found. Executing Hard Redirect...");
+    console.log("🚀 Redirecting to dashboard...");
 
-    // Using .href forces the browser to reload the session context entirely
-    window.location.href = "/dashboard";
+    setTimeout(() => {
+      window.location.href = "/dashboard";
+    }, 800);
   };
 
-  /**
-   * 3. THE WATCHDOG INTERVAL
-   * If you are showing as "logged in" but didn't redirect, this interval
-   * catches that state and forces the move every 1000ms.
-   */
+  // Auto-redirect when auth succeeds
   useEffect(() => {
-    if (!mounted) return;
+    if (!mounted || isRedirecting) return;
 
-    const checkSession = () => {
-      if ((isSuccess || isConnected || data?.username) && !isRedirecting) {
-        handleRedirect();
-      }
-    };
-
-    // Immediate check
-    checkSession();
-
-    // Heartbeat check (catches lags in Farcaster provider state)
-    const interval = setInterval(checkSession, 1000);
-    return () => clearInterval(interval);
+    if (isSuccess || isConnected || data?.username) {
+      triggerRedirect();
+    }
   }, [isSuccess, isConnected, data, mounted, isRedirecting]);
 
-  if (!mounted) return <div className="min-h-screen bg-black" />;
+  if (!mounted) {
+    return <div className="min-h-screen bg-black" />;
+  }
 
   return (
     <div className="flex flex-col items-center pt-10 md:pt-16 pb-32 min-h-screen bg-black text-white selection:bg-[#b87209] selection:text-black">
