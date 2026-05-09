@@ -15,6 +15,5 @@ export function FarcasterProvider({ children }: { children: React.ReactNode }) {
     [],
   );
 
-  // Always wrap with the provider — no early return
   return <AuthKitProvider config={config}>{children}</AuthKitProvider>;
 }
