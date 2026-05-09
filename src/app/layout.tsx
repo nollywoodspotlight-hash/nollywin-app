@@ -53,6 +53,7 @@ export default function RootLayout({
               © 2026 NollyWin App • Built on Base Network
             </footer>
 
+            {/* Mini App Ready */}
             <MiniAppReady />
           </FarcasterProvider>
         </Providers>

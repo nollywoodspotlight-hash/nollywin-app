@@ -5,19 +5,17 @@ import sdk from "@farcaster/frame-sdk";
 
 export function MiniAppReady() {
   useEffect(() => {
-    const init = async () => {
+    const makeReady = async () => {
       try {
-        console.log("📡 Calling sdk.actions.ready()...");
+        console.log("📡 Attempting sdk.actions.ready()...");
         await sdk.actions.ready();
-        console.log(
-          "✅ sdk.actions.ready() SUCCESS — Splash screen should be gone",
-        );
-      } catch (error) {
-        console.error("❌ sdk.actions.ready() failed:", error);
+        console.log("✅ sdk.actions.ready() called SUCCESSFULLY");
+      } catch (err) {
+        console.error("❌ ready() failed:", err);
       }
     };
 
-    init();
+    makeReady();
   }, []);
 
   return null;
