@@ -10,11 +10,12 @@ export default function Dashboard() {
   const { disconnect } = useDisconnect();
   const router = useRouter();
 
-  // Farcaster Hooks
+  // Farcaster Hooks (added signOut)
   const {
     isConnected: isFarcasterConnected,
     isSuccess,
     data: farcasterData,
+    signOut: farcasterSignOut, // ← This clears Farcaster session properly
   } = useSignIn({});
 
   const { isAuthenticated, profile } = useProfile();
@@ -30,7 +31,7 @@ export default function Dashboard() {
     multiplier: "2X",
   });
 
-  // Enhanced Auth Check + Debug Logs
+  // Strong auth check + debug logs
   useEffect(() => {
     const hasAuth =
       isWagmiConnected ||
@@ -47,18 +48,15 @@ export default function Dashboard() {
       isAuthenticated,
       hasProfile: !!profile,
       hasFarcasterData: !!farcasterData,
-      profileUsername: profile?.username,
-      farcasterUsername: farcasterData?.username,
       hasAuth,
     });
 
     if (hasAuth) {
       setIsCheckingAuth(false);
-      console.log("✅ Auth confirmed - rendering full dashboard");
+      console.log("✅ Auth confirmed - rendering dashboard");
     } else {
-      // Longer timeout for Warpcast
       const timeout = setTimeout(() => {
-        console.log("⏰ No auth after 6s → redirecting to home");
+        console.log("⏰ No auth after 6s → redirecting");
         router.push("/");
       }, 6000);
 
@@ -74,21 +72,19 @@ export default function Dashboard() {
     router,
   ]);
 
-  // Notify Warpcast when dashboard becomes visible
-  useEffect(() => {
-    const handleVisibility = () => {
-      if (document.visibilityState === "visible") {
-        console.log("📱 Dashboard is visible in Warpcast");
-      }
-    };
+  // Improved Logout - clears BOTH Wagmi + Farcaster session
+  const handleLogout = async () => {
+    try {
+      await farcasterSignOut?.(); // Clears Farcaster SIWE session
+      disconnect(); // Clears wallet
+      // Extra cleanup for stubborn cached sessions
+      localStorage.removeItem("farcaster-siwe");
+      localStorage.removeItem("siwe");
+    } catch (e) {
+      console.error("Logout error:", e);
+    }
 
-    document.addEventListener("visibilitychange", handleVisibility);
-    return () =>
-      document.removeEventListener("visibilitychange", handleVisibility);
-  }, []);
-
-  const handleLogout = () => {
-    disconnect();
+    // Hard reload forces full re-init
     window.location.href = "/";
   };
 
@@ -99,16 +95,12 @@ export default function Dashboard() {
 
   const referralLink = `https://nollywin.app/?ref=${userIdentifier}`;
 
-  // Loading Screen
   if (isCheckingAuth) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[80vh] bg-black text-white">
         <div className="w-12 h-12 border-2 border-[#b87209] border-t-transparent rounded-full animate-spin mb-4" />
         <p className="text-[#b87209] font-black uppercase italic tracking-widest text-[10px] animate-pulse">
           Connecting to NollyWin Studio...
-        </p>
-        <p className="text-[10px] text-gray-500 mt-4">
-          This may take a few seconds in Warpcast
         </p>
       </div>
     );
@@ -117,7 +109,7 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-black text-white selection:bg-[#b87209] selection:text-black p-6 md:p-12">
       <div className="max-w-7xl mx-auto space-y-10 animate-in fade-in duration-1000">
-        {/* --- DASHBOARD HEADER --- */}
+        {/* HEADER */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border-b border-white/5 pb-8">
           <div>
             <h2 className="text-[#b87209] text-[10px] font-black uppercase tracking-[0.4em] mb-2">
@@ -161,7 +153,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* --- MAIN CONTENT GRID --- */}
+        {/* Rest of your dashboard UI (unchanged) */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
           {/* Left Column: Strategy Input */}
           <div className="lg:col-span-1 bg-black/40 border border-white/10 p-8 rounded-sm space-y-6 relative overflow-hidden">
