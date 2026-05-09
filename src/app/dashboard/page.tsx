@@ -30,6 +30,7 @@ export default function Dashboard() {
     multiplier: "2X",
   });
 
+  // Enhanced Auth Check + Debug Logs
   useEffect(() => {
     const hasAuth =
       isWagmiConnected ||
@@ -53,11 +54,11 @@ export default function Dashboard() {
 
     if (hasAuth) {
       setIsCheckingAuth(false);
-      console.log("✅ Auth confirmed - rendering dashboard");
+      console.log("✅ Auth confirmed - rendering full dashboard");
     } else {
-      // Longer timeout for Warpcast / Mini App
+      // Longer timeout for Warpcast
       const timeout = setTimeout(() => {
-        console.log("⏰ No auth detected after 6s → redirecting to home");
+        console.log("⏰ No auth after 6s → redirecting to home");
         router.push("/");
       }, 6000);
 
@@ -72,6 +73,19 @@ export default function Dashboard() {
     farcasterData,
     router,
   ]);
+
+  // Notify Warpcast when dashboard becomes visible
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        console.log("📱 Dashboard is visible in Warpcast");
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () =>
+      document.removeEventListener("visibilitychange", handleVisibility);
+  }, []);
 
   const handleLogout = () => {
     disconnect();
