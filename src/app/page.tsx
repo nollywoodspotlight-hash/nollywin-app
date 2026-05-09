@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { SignInButton, useSignIn } from "@farcaster/auth-kit";
 import { ConnectWallet, Wallet } from "@coinbase/onchainkit/wallet";
+import { useRouter } from "next/navigation";
 import "@farcaster/auth-kit/styles.css";
 
 export default function HomePage() {
@@ -15,6 +16,8 @@ export default function HomePage() {
       triggerRedirect();
     },
   });
+
+  const router = useRouter();
 
   useEffect(() => {
     setMounted(true);

@@ -1,21 +1,22 @@
 "use client";
 
 import { useEffect } from "react";
-import sdk from "@farcaster/frame-sdk";
+import sdk from "@farcaster/frame-sdk"; // Make sure you're using frame-sdk
 
 export function MiniAppReady() {
   useEffect(() => {
-    const init = async () => {
+    const initialize = async () => {
       try {
-        console.log("📡 Calling sdk.actions.ready()...");
+        console.log("📡 Initializing Farcaster Mini App...");
         await sdk.actions.ready();
-        console.log("✅ Farcaster Mini App ready() succeeded");
+        console.log("✅ sdk.actions.ready() called successfully");
       } catch (error) {
-        console.error("❌ sdk.actions.ready() failed:", error);
+        console.error("❌ Failed to call sdk.actions.ready():", error);
       }
     };
 
-    init();
+    // Call it as soon as possible
+    initialize();
   }, []);
 
   return null;
