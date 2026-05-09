@@ -23,18 +23,18 @@ export default function HomePage() {
     setMounted(true);
   }, []);
 
-  // Centralized redirect function
+  // Trigger redirect
   const triggerRedirect = () => {
     if (isRedirecting) return;
     setIsRedirecting(true);
-    console.log("🚀 Redirecting to dashboard...");
+    console.log("🚀 Redirecting to /dashboard...");
 
     setTimeout(() => {
       window.location.href = "/dashboard";
     }, 800);
   };
 
-  // Auto-redirect when auth succeeds
+  // Auto-redirect watchdog
   useEffect(() => {
     if (!mounted || isRedirecting) return;
 

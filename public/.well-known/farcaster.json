@@ -1,7 +1,15 @@
 {
   "accountAssociation": {
-    "header": "eyJmaWQiOiA4ODg4ODgsICJ0eXBlIjogImN1c3RvbW9uIn0",
-    "payload": "eyJkb21haW4iOiAibm9sbHl3aW4tYXBwLnZlcmNlbC5hcHAifQ",
-    "signature": ""
+    "header": "PASTE_THE_HEADER_HERE",
+    "payload": "PASTE_THE_PAYLOAD_HERE",
+    "signature": "PASTE_THE_SIGNATURE_HERE"
+  },
+  "miniapp": {
+    "version": "1",
+    "name": "NollyWin",
+    "iconUrl": "https://nollywin-app.vercel.app/icon.png", // add a real icon if you have one
+    "homeUrl": "https://nollywin-app.vercel.app",
+    "splashImageUrl": "https://nollywin-app.vercel.app/galaxy.jpg",
+    "splashBackgroundColor": "#000000"
   }
 }
