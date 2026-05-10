@@ -8,15 +8,9 @@ const config: Config = {
   ],
   theme: {
     extend: {
-      colors: {
-        nolly: {
-          gold: "#FFD700",
-          accent: "#b87209",
-          red: "#E50914",
-          black: "#0A0A0A",
-        },
-      },
-      // --- THIS IS THE MISSING MOTOR ---
+      // ... your colors ...
+
+      // THIS IS WHAT MAKES THE NAVBAR SCROLL
       animation: {
         marquee: "marquee 25s linear infinite",
       },

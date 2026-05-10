@@ -10,16 +10,13 @@ export default function HomePage() {
   const { isConnected, address } = useAccount();
   const [mounted, setMounted] = useState(false);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // Redirect to dashboard if already connected
-  useEffect(() => {
-    if (mounted && isConnected && address) {
-      router.push("/dashboard");
-    }
-  }, [isConnected, address, mounted, router]);
+  // REMOVE THIS BLOCK TO ALLOW HOME PAGE ACCESS WHILE LOGGED IN
+  /* useEffect(() => {
+  if (mounted && isConnected && address) {
+    router.push("/dashboard");
+  }
+}, [isConnected, address, mounted, router]); 
+*/
 
   if (!mounted) return <div className="min-h-screen bg-black" />;
 
