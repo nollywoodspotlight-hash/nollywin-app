@@ -10,7 +10,7 @@ const config: Config = {
     extend: {
       animation: {
         // This links to the keyframes below
-        marquee: "marquee 25s linear infinite",
+        marquee: "marquee 90s linear infinite",
       },
       keyframes: {
         marquee: {

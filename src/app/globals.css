@@ -31,3 +31,23 @@ main {
   background: #ffd700;
   border-radius: 10px;
 }
+@keyframes marquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+.animate-marquee {
+  display: inline-block;
+  animation: marquee 90s linear infinite;
+}
+
+/* This makes the links feel like a real news ticker */
+.animate-marquee span:hover {
+  color: #ffd700;
+  cursor: pointer;
+  text-decoration: underline;
+}

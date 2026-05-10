@@ -23,25 +23,38 @@ export default function Navbar() {
 
   return (
     <nav className="w-full z-[100] relative bg-black border-b border-white/5">
-      {/* --- THE COLORFUL MARQUEE --- */}
-      <div className="bg-[#1d02cb] py-2 overflow-hidden whitespace-nowrap border-b border-[#b87209]/30">
-        <div className="inline-block animate-marquee whitespace-nowrap">
+      {/* --- THE MARQUEE BAR --- */}
+      {/* 'group' is added here so we can pause the animation on hover */}
+      <div className="bg-[#1d02cb] py-2 overflow-hidden whitespace-nowrap border-b border-[#b87209]/30 group cursor-pointer">
+        <div className="inline-block animate-marquee whitespace-nowrap group-hover:[animation-play-state:paused]">
           {[...Array(8)].map((_, i) => (
             <span
               key={i}
               className="text-[10px] font-black uppercase tracking-[0.3em] mx-10"
             >
-              <span className="text-white">
+              {/* Wrapped in anchor tags for future links (Nollywood Spotlight / Strategies) */}
+              <a
+                href="#"
+                className="text-white hover:text-yellow-400 transition-colors"
+              >
                 🚀 LIVE PRODUCTION: BASE MAINNET ACTIVE
-              </span>
+              </a>
               <span className="text-[#b87209] mx-6">|</span>
-              <span className="text-yellow-400">
+
+              <a
+                href="#"
+                className="text-yellow-400 hover:text-white transition-colors"
+              >
                 🎬 1% FOUNDER ROYALTIES ENABLED
-              </span>
+              </a>
               <span className="text-[#b87209] mx-6">|</span>
-              <span className="text-cyan-400">
+
+              <a
+                href="#"
+                className="text-cyan-400 hover:text-white transition-colors"
+              >
                 💎 NOLLYWIN DEPLOYMENT SUCCESSFUL
-              </span>
+              </a>
               <span className="text-[#b87209] mx-6">|</span>
             </span>
           ))}
