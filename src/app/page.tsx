@@ -14,6 +14,7 @@ export default function HomePage() {
     setMounted(true);
   }, []);
 
+  // REDIRECT LOGIC: Syncs with both Navbar and Hero button actions
   useEffect(() => {
     if (mounted && isConnected) {
       const timer = setTimeout(() => {
@@ -27,12 +28,14 @@ export default function HomePage() {
 
   return (
     <main className="flex flex-col items-center min-h-screen bg-black text-white selection:bg-[#b87209] selection:text-black overflow-x-hidden relative">
-      {/* --- NOIR AMBIANCE (GLOW) --- */}
+      {/* --- NOIR AMBIANCE (GLOW RESTORATION) --- */}
+      {/* Forced hardware acceleration (transform-gpu) ensures the glow shows on mobile */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[140%] h-[40%] bg-[#b87209]/20 blur-[100px] rounded-full transform-gpu opacity-100" />
       </div>
 
       {/* --- HERO SECTION --- */}
+      {/* Added pt-28 to ensure content fits below the fixed header on mobile */}
       <div className="text-center space-y-6 max-w-5xl px-6 pt-28 md:pt-40 relative z-10">
         <div className="inline-block border border-[#b87209]/40 px-4 py-1 mb-6">
           <h2 className="text-[#b87209] text-[10px] font-black uppercase tracking-[0.5em] animate-pulse">
@@ -57,31 +60,35 @@ export default function HomePage() {
         </p>
       </div>
 
-      {/* --- GOLD GLOW MARQUEE (RESTORED & UPDATED) --- */}
-      <div className="w-full mt-12 py-4 bg-[#b87209]/5 border-y border-[#b87209]/20 relative z-10 overflow-hidden shadow-[0_0_20px_rgba(184,114,9,0.1)]">
+      {/* --- MINIMALIST GOLD GLOW MARQUEE --- */}
+      <div className="w-full mt-12 py-6 bg-[#b87209]/5 border-y border-[#b87209]/20 relative z-10 overflow-hidden shadow-[0_0_25px_rgba(0,0,0,0.5)]">
         <div className="flex animate-marquee whitespace-nowrap">
-          {[...Array(10)].map((_, i) => (
-            <span key={i} className="flex items-center">
-              <span className="text-[#b87209] font-black italic uppercase text-sm tracking-[0.3em] drop-shadow-[0_0_8px_rgba(184,114,9,0.4)]">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="flex items-center mx-24 md:mx-48">
+              <span className="text-[#b87209] font-black italic uppercase text-lg md:text-xl tracking-[0.5em] drop-shadow-[0_0_12px_rgba(184,114,9,0.5)]">
                 DEPLOYING ON BASE
               </span>
-              <span className="mx-8 text-white/20">/</span>
-              <span className="text-white font-black italic uppercase text-sm tracking-[0.3em]">
+              <span className="mx-24 md:mx-48 text-white/10 text-2xl font-thin tracking-widest">
+                ///
+              </span>
+              <span className="text-white font-black italic uppercase text-lg md:text-xl tracking-[0.5em]">
                 NOLLYWIN PRODUCTION SYSTEM
               </span>
-              <span className="mx-8 text-white/20">/</span>
-            </span>
+            </div>
           ))}
         </div>
       </div>
 
-      {/* --- AUTH PORTAL --- */}
+      {/* --- AUTH PORTAL (CENTERED) --- */}
       <div className="mt-16 w-[90%] max-w-sm bg-black border border-[#b87209]/30 p-10 backdrop-blur-xl relative z-20 shadow-[0_20px_50px_rgba(0,0,0,0.8)] transform-gpu">
         <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#b87209] text-black text-[10px] font-black px-6 py-1 uppercase tracking-widest whitespace-nowrap text-center">
           Executive Access
         </div>
+
         <div className="flex flex-col items-center justify-center space-y-6">
+          {/* NollyWallet handles the logic; UI is dictated by your design system */}
           <NollyWallet className="w-full" />
+
           <p className="text-[9px] text-gray-500 uppercase font-black tracking-[0.3em]">
             {isConnected ? "Welcome, Producer" : "Authorized via Base Mainnet"}
           </p>
@@ -138,8 +145,11 @@ export default function HomePage() {
             </p>
           </div>
 
-          {/* Card: Founder's Cut */}
+          {/* Card: Founder's Cut (Enhanced Glow Card) */}
           <div className="p-8 bg-[#b87209]/5 border border-[#b87209]/40 shadow-[0_0_40px_rgba(184,114,9,0.15)] relative overflow-hidden transform-gpu">
+            <div className="absolute top-0 right-0 p-2 opacity-30">
+              <div className="w-12 h-12 border-t-2 border-r-2 border-[#b87209]"></div>
+            </div>
             <div className="text-4xl font-black italic text-[#b87209] mb-4 drop-shadow-[0_0_10px_rgba(184,114,9,0.5)]">
               $$
             </div>
