@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import "@coinbase/onchainkit/styles.css";
@@ -13,32 +13,37 @@ export const metadata: Metadata = {
   description: "Automated trading with a Nollywood soul. Powered by Base.",
 };
 
+// Prevents the browser from zooming in on mobile,
+// keeping the heavy italic typography perfectly framed.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+};
+
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      {/* 'min-h-screen' + 'flex flex-col' is the secret for mobile.
-        It forces the body to be at least the height of the phone screen,
-        pushing the footer to the bottom and keeping the navbar at the top.
-      */}
+    <html lang="en" className="bg-black">
       <body
-        className={`${inter.className} bg-black antialiased text-white min-h-screen flex flex-col`}
+        className={`${inter.className} bg-black antialiased text-white min-h-screen flex flex-col overflow-x-hidden`}
       >
         <Providers>
-          {/* Z-index 100 ensures the Navbar stays above the Hero text 
-            on small mobile screens. 
+          {/* The internal <Navbar /> is fixed, so we don't need a wrapper 
+              header here. Removing the relative wrapper helps fixed positioning.
           */}
-          <header className="z-[100] relative">
-            <Navbar />
-          </header>
+          <Navbar />
 
-          {/* 'flex-grow' ensures this section fills the gap between 
-            Navbar and Footer. 
+          {/* 'pt-20' ensures that on mobile, the content starts AFTER the 80px header.
+              On desktop ('md:pt-0'), we let the Hero section handle its own spacing.
           */}
-          <main className="relative flex-grow w-full">{children}</main>
+          <main className="relative flex-grow w-full pt-20 md:pt-0">
+            {children}
+          </main>
 
           <Footer />
         </Providers>
