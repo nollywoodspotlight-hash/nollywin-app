@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useAccount, useDisconnect } from "wagmi";
 import { useRouter } from "next/navigation";
-import { Copy, Share2, Play } from "lucide-react"; // Removed CircleStopimport { Copy, Share2, Play, CircleStop } from "lucide-react";
+import { Copy, Share2, Play, AlertCircle } from "lucide-react";
 
 export default function Dashboard() {
   const { address, isConnected } = useAccount();
@@ -13,10 +13,24 @@ export default function Dashboard() {
   const [isTrading, setIsTrading] = useState(false);
   const [referralLink, setReferralLink] = useState("");
 
+  // --- NEW STRATEGY STATES ---
+  const [stallCount, setStallCount] = useState(0);
+  const [lifecycleState, setLifecycleState] = useState(0); // 0: ACTIVE, 2: STALLED, 4: CANCELLED
+  const [tokenTicker, setTokenTicker] = useState("PEPE");
+  const [dcaAmount, setDcaAmount] = useState(0.1);
+  const [profitTarget, setProfitTarget] = useState(100);
+
+  const LifecycleMapping: { [key: number]: string } = {
+    0: "ACTIVE",
+    1: "PAUSED",
+    2: "STALLED",
+    3: "COMPLETED",
+    4: "CANCELLED",
+  };
+
   useEffect(() => {
     setMounted(true);
     if (address) {
-      // Generate referral link based on the user's address
       setReferralLink(
         `${window.location.origin}/?ref=${address.slice(0, 6)}...${address.slice(-4)}`,
       );
@@ -43,7 +57,7 @@ export default function Dashboard() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-[#b87209]/20 pb-8 gap-6">
           <div>
             <h2 className="text-[#b87209] text-[10px] font-black uppercase tracking-[0.4em] mb-2 animate-pulse">
-              Executive Producer Active
+              Executive Producer Active | {LifecycleMapping[lifecycleState]}
             </h2>
             <h1 className="text-5xl md:text-7xl font-black uppercase italic tracking-tighter">
               Control <span className="text-[#b87209]">Room</span>
@@ -63,76 +77,115 @@ export default function Dashboard() {
 
         {/* --- MAIN GRID --- */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* 1. TRADE WINDOW (OPERATIONAL) */}
+          {/* 1. TRADE WINDOW */}
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-white/[0.02] border border-[#b87209]/30 p-8 relative overflow-hidden group">
               <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-30 transition-opacity">
                 <Play size={80} className="text-[#b87209]" />
               </div>
 
-              <h3 className="text-[#b87209] text-xs font-black uppercase tracking-widest mb-6 italic border-l-2 border-[#b87209] pl-3">
-                Script Configuration (DCA)
-              </h3>
+              <div className="flex justify-between items-start mb-6">
+                <h3 className="text-[#b87209] text-xs font-black uppercase tracking-widest italic border-l-2 border-[#b87209] pl-3">
+                  Script Configuration (DCA)
+                </h3>
+                {/* STALL COUNTER UI */}
+                <div className="text-right">
+                  <p className="text-[9px] uppercase font-black text-gray-500">
+                    Stall Count
+                  </p>
+                  <p
+                    className={`text-xl font-black italic ${stallCount >= 3 ? "text-red-600" : "text-white"}`}
+                  >
+                    {stallCount}/3
+                  </p>
+                </div>
+              </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-4">
                   <div>
                     <label className="text-[9px] uppercase font-black text-gray-500 tracking-widest">
-                      Investment Amount (ETH)
+                      Target Token:{" "}
+                      <span className="text-white">{tokenTicker}</span>
                     </label>
                     <input
                       type="number"
-                      placeholder="0.1"
+                      value={dcaAmount}
+                      onChange={(e) => setDcaAmount(Number(e.target.value))}
                       className="w-full bg-black border border-white/10 p-4 mt-1 font-black italic text-[#b87209] focus:border-[#b87209] outline-none transition-all"
                     />
                   </div>
                   <div>
                     <label className="text-[9px] uppercase font-black text-gray-500 tracking-widest">
-                      Frequency
+                      Profit Target (%)
                     </label>
-                    <select className="w-full bg-black border border-white/10 p-4 mt-1 font-black italic text-white focus:border-[#b87209] outline-none transition-all appearance-none">
-                      <option>Daily Premiere</option>
-                      <option>Weekly Feature</option>
-                      <option>Monthly Epic</option>
-                    </select>
+                    <input
+                      type="number"
+                      value={profitTarget}
+                      onChange={(e) => setProfitTarget(Number(e.target.value))}
+                      className="w-full bg-black border border-white/10 p-4 mt-1 font-black italic text-white focus:border-[#b87209] outline-none transition-all"
+                    />
                   </div>
                 </div>
 
                 <div className="flex flex-col justify-end">
                   <button
                     onClick={() => setIsTrading(!isTrading)}
+                    disabled={lifecycleState === 4}
                     className={`w-full py-6 font-black italic uppercase tracking-widest transition-all duration-500 ${
-                      isTrading
-                        ? "bg-red-600 text-white shadow-[0_0_30px_rgba(220,38,38,0.4)]"
-                        : "bg-[#b87209] text-black shadow-[0_0_30px_rgba(184,114,9,0.3)] hover:bg-white"
+                      lifecycleState === 4
+                        ? "bg-gray-800 text-gray-500 cursor-not-allowed"
+                        : isTrading
+                          ? "bg-red-600 text-white shadow-[0_0_30px_rgba(220,38,38,0.4)]"
+                          : "bg-[#b87209] text-black shadow-[0_0_30px_rgba(184,114,9,0.3)] hover:bg-white"
                     }`}
                   >
-                    {isTrading ? "Stop Production" : "Start Production"}
+                    {lifecycleState === 4
+                      ? "Script Cancelled"
+                      : isTrading
+                        ? "Stop Production"
+                        : "Start Production"}
                   </button>
                 </div>
               </div>
             </div>
 
-            {/* LIVE FEED PLACEHOLDER */}
+            {/* LIVE FEED */}
             <div className="border border-white/5 bg-black p-4 font-mono text-[10px] text-gray-500 h-32 overflow-hidden relative">
               <div className="animate-pulse">
-                {isTrading ? (
+                {lifecycleState === 2 && (
+                  <p className="text-orange-500">
+                    [WARNING] Strategy STALLED: Insufficient ETH Balance.
+                  </p>
+                )}
+                {lifecycleState === 4 && (
+                  <p className="text-red-500">
+                    [FATAL] Strategy CANCELLED: Max Stalls Reached.
+                  </p>
+                )}
+                {isTrading && lifecycleState === 0 ? (
                   <p className="text-green-500">
                     [SYSTEM] Executing trade on Base... Success.
                   </p>
                 ) : (
-                  <p>[SYSTEM] Awaiting script execution instructions...</p>
+                  <p>[SYSTEM] Awaiting instructions...</p>
                 )}
-                <p> {">"} Initializing cinematic engine...</p>
-                <p> {">"} Scanning liquidity pools...</p>
+                <p>
+                  {" "}
+                  {">"} Security Protocol: Reentrancy & Slippage protection
+                  ACTIVE.
+                </p>
+                <p>
+                  {" "}
+                  {">"} ID: {address?.slice(0, 10)}... (Verified Producer)
+                </p>
               </div>
               <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent pointer-events-none" />
             </div>
           </div>
 
-          {/* 2. SIDEBAR (REFERRALS & STATS) */}
+          {/* 2. SIDEBAR */}
           <div className="space-y-8">
-            {/* STAT CARD */}
             <div className="bg-[#b87209]/5 border border-[#b87209]/30 p-8 relative">
               <h3 className="text-[#b87209] text-[10px] font-black uppercase mb-4 tracking-widest">
                 Founder&apos;s Cut (Royalties)
@@ -142,11 +195,10 @@ export default function Dashboard() {
               </p>
               <div className="mt-4 h-[1px] bg-[#b87209]/20 w-full" />
               <p className="text-[9px] text-gray-500 mt-4 uppercase font-bold tracking-tighter">
-                Lifetime production earnings
+                Profit Calculated | Settlement Pending
               </p>
             </div>
 
-            {/* UNIQUE REFERRAL LINK */}
             <div className="bg-white/[0.03] border border-white/10 p-8">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-white text-[10px] font-black uppercase tracking-widest">
@@ -155,7 +207,7 @@ export default function Dashboard() {
                 <Share2 size={14} className="text-[#b87209]" />
               </div>
               <p className="text-gray-500 text-[9px] uppercase font-bold mb-4 italic">
-                Invite new producers and earn 1% of their lifetime production.
+                Earn 1% of lifetime production from your recruits.
               </p>
               <div className="flex bg-black border border-white/10 overflow-hidden">
                 <input
