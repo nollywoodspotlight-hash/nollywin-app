@@ -11,40 +11,64 @@ export default function Header() {
 
   const handleConnect = useCallback(() => {
     setIsMenuOpen(false);
-    router.push("/dashboard");
-  }, [router]);
+  }, []);
+
+  const navLinks = [
+    { name: "Home", path: "/" },
+    { name: "Dashboard", path: "/dashboard" },
+    { name: "Archive", path: "/archive" },
+    { name: "About", path: "/about" },
+  ];
 
   return (
-    <header className="fixed top-0 left-0 w-full z-[9999] bg-black/90 backdrop-blur-md border-b border-[#b87209]/30 h-20 transform-gpu">
+    <header className="fixed top-0 w-full z-[100] bg-black/80 backdrop-blur-md border-b border-[#b87209]/20 h-20">
       <div className="max-w-7xl mx-auto px-4 h-full flex items-center justify-between">
-        {/* --- LOGO SECTION --- */}
+        {/* NOLLYWIN LOGO: NW Nollywin by Nollywood spotlight */}
         <div
-          className="flex items-center cursor-pointer shrink-0"
+          className="flex flex-col cursor-pointer shrink-0 leading-none"
           onClick={() => router.push("/")}
         >
-          <div className="w-8 h-8 bg-[#b87209] flex items-center justify-center font-black italic text-black mr-2">
-            B
+          <div className="flex items-baseline space-x-1">
+            <span className="font-black italic text-2xl text-white uppercase tracking-tighter">
+              NW
+            </span>
+            <span className="font-black italic text-2xl text-[#b87209] uppercase tracking-tighter">
+              Nollywin
+            </span>
           </div>
-          <span className="font-black italic text-xl text-white uppercase tracking-tighter">
-            THE <span className="text-[#b87209]">STUDIO</span>
+          <span className="text-[8px] font-black uppercase tracking-[0.2em] text-white/50 italic">
+            by Nollywood spotlight
           </span>
         </div>
 
-        {/* --- ACTION SECTION --- */}
+        {/* DESKTOP NAVIGATION */}
+        <nav className="hidden lg:flex items-center space-x-8">
+          {navLinks.map((link) => (
+            <button
+              key={link.name}
+              onClick={() => router.push(link.path)}
+              className="text-[11px] font-black italic uppercase tracking-widest text-white hover:text-[#b87209] transition-colors"
+            >
+              {link.name}
+            </button>
+          ))}
+        </nav>
+
+        {/* ACTION CONTAINER */}
         <div className="flex items-center space-x-3">
-          {/* MOBILE PAGE BUTTON: Forced visibility on small screens */}
+          {/* MOBILE CONNECT BUTTON */}
           <div className="flex md:hidden items-center">
             <Wallet>
               <ConnectWallet
                 onConnect={handleConnect}
-                className="!flex bg-[#b87209] text-black font-black italic text-[10px] uppercase py-2 px-4 rounded-none hover:bg-white transition-all transform-gpu"
+                className="!flex bg-[#b87209] text-black font-black italic text-[10px] uppercase py-2 px-4 rounded-none"
               >
                 Connect
               </ConnectWallet>
             </Wallet>
           </div>
 
-          {/* DESKTOP PAGE BUTTON */}
+          {/* DESKTOP CONNECT BUTTON */}
           <div className="hidden md:flex items-center">
             <Wallet>
               <ConnectWallet
@@ -56,36 +80,31 @@ export default function Header() {
             </Wallet>
           </div>
 
-          {/* NOLLYWIN HAMBURGER TOGGLE */}
+          {/* HAMBURGER MENU */}
           <button
-            className="text-[#b87209] p-2 hover:bg-[#b87209]/10 transition-colors border border-[#b87209]/20"
+            className="md:hidden text-[#b87209] p-1"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
-            aria-label="Toggle Menu"
           >
-            {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+            {isMenuOpen ? <X size={28} /> : <Menu size={28} />}
           </button>
         </div>
       </div>
 
-      {/* --- MOBILE NOIR OVERLAY --- */}
+      {/* MOBILE NAVIGATION OVERLAY */}
       {isMenuOpen && (
-        <div className="fixed inset-x-0 top-20 bg-black border-b border-[#b87209]/40 p-8 flex flex-col space-y-6 z-[10000] animate-in fade-in slide-in-from-top-2">
-          <nav className="flex flex-col space-y-6">
-            <a
-              href="#"
-              className="text-[#b87209] font-black italic uppercase text-2xl border-l-4 border-[#b87209] pl-4"
-              onClick={() => setIsMenuOpen(false)}
+        <div className="md:hidden absolute top-20 left-0 w-full bg-black border-b border-[#b87209]/20 p-8 flex flex-col space-y-6 z-[101] animate-in fade-in slide-in-from-top-2">
+          {navLinks.map((link) => (
+            <button
+              key={link.name}
+              onClick={() => {
+                router.push(link.path);
+                setIsMenuOpen(false);
+              }}
+              className="text-left text-2xl font-black italic uppercase text-white hover:text-[#b87209] border-l-2 border-[#b87209]/40 pl-4"
             >
-              Archives
-            </a>
-            <a
-              href="#"
-              className="text-white font-black italic uppercase text-2xl border-l-4 border-white/10 pl-4 hover:border-[#b87209] hover:text-[#b87209] transition-all"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              Cinema
-            </a>
-          </nav>
+              {link.name}
+            </button>
+          ))}
         </div>
       )}
     </header>
