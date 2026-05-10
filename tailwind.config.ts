@@ -8,10 +8,8 @@ const config: Config = {
   ],
   theme: {
     extend: {
-      // ... your colors ...
-
-      // THIS IS WHAT MAKES THE NAVBAR SCROLL
       animation: {
+        // This links to the keyframes below
         marquee: "marquee 25s linear infinite",
       },
       keyframes: {

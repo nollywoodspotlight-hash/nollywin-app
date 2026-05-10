@@ -1,24 +1,19 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { useAccount } from "wagmi";
 import { ConnectWallet, Wallet } from "@coinbase/onchainkit/wallet";
 
 export default function HomePage() {
-  const router = useRouter();
-  const { isConnected, address } = useAccount();
   const [mounted, setMounted] = useState(false);
 
-  // REMOVE THIS BLOCK TO ALLOW HOME PAGE ACCESS WHILE LOGGED IN
-  /* useEffect(() => {
-  if (mounted && isConnected && address) {
-    router.push("/dashboard");
-  }
-}, [isConnected, address, mounted, router]); 
-*/
+  // This prevents the "Blank Page" by waiting for the browser to be ready
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
-  if (!mounted) return <div className="min-h-screen bg-black" />;
+  if (!mounted) {
+    return <div className="min-h-screen bg-black" />;
+  }
 
   return (
     <div className="flex flex-col items-center pt-12 md:pt-20 pb-32 min-h-screen bg-black text-white selection:bg-[#b87209] selection:text-black overflow-x-hidden">
@@ -52,7 +47,7 @@ export default function HomePage() {
 
       {/* --- AUTH PORTAL (CENTERED) --- */}
       <div className="mt-16 w-full max-w-sm bg-black/60 border border-[#b87209]/30 p-10 backdrop-blur-xl relative z-20 shadow-[0_0_50px_rgba(184,114,9,0.1)]">
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#b87209] text-black text-[10px] font-black px-6 py-1 uppercase tracking-widest whitespace-nowrap">
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#b87209] text-black text-[10px] font-black px-6 py-1 uppercase tracking-widest whitespace-nowrap text-center">
           Executive Access
         </div>
 
@@ -78,7 +73,7 @@ export default function HomePage() {
       <div className="mt-20 w-full max-w-6xl px-6 relative z-10">
         <div className="flex items-center space-x-4 mb-10">
           <div className="h-[1px] flex-1 bg-white/10" />
-          <h3 className="text-white font-black uppercase italic tracking-widest text-sm">
+          <h3 className="text-white font-black uppercase italic tracking-widest text-sm text-center">
             The Production Protocol
           </h3>
           <div className="h-[1px] flex-1 bg-white/10" />
@@ -137,13 +132,6 @@ export default function HomePage() {
             </p>
           </div>
         </div>
-      </div>
-
-      {/* --- FOOTER TAG --- */}
-      <div className="mt-20 opacity-30">
-        <p className="text-[8px] font-black uppercase tracking-[1em] text-white">
-          NollyWin © 2026 Studio City
-        </p>
       </div>
     </div>
   );
