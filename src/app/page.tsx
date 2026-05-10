@@ -57,7 +57,7 @@ export default function HomePage() {
 
       <div className="w-full mt-12 py-6 bg-[#b87209]/5 border-y border-[#b87209]/20 relative z-10 overflow-hidden shadow-[0_0_25px_rgba(0,0,0,0.5)]">
         <div className="flex animate-marquee whitespace-nowrap">
-          {[...Array(6)].map((_, i) => (
+          {[0, 1, 2, 3, 4, 5].map((i) => (
             <div key={i} className="flex items-center mx-24 md:mx-48">
               <span className="text-[#b87209] font-black italic uppercase text-lg md:text-xl tracking-[0.5em] drop-shadow-[0_0_12px_rgba(184,114,9,0.5)]">
                 DEPLOYING ON BASE
