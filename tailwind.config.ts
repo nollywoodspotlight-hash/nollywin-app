@@ -16,8 +16,9 @@ const config: Config = {
           black: "#0A0A0A",
         },
       },
+      // --- THIS IS THE MISSING MOTOR ---
       animation: {
-        marquee: "marquee 30s linear infinite",
+        marquee: "marquee 25s linear infinite",
       },
       keyframes: {
         marquee: {
