@@ -14,7 +14,6 @@ export default function HomePage() {
     setMounted(true);
   }, []);
 
-  // REDIRECT LOGIC: Syncs with both Navbar and Hero button actions
   useEffect(() => {
     if (mounted && isConnected) {
       const timer = setTimeout(() => {
@@ -29,13 +28,11 @@ export default function HomePage() {
   return (
     <main className="flex flex-col items-center min-h-screen bg-black text-white selection:bg-[#b87209] selection:text-black overflow-x-hidden relative">
       {/* --- NOIR AMBIANCE (GLOW RESTORATION) --- */}
-      {/* Forced hardware acceleration (transform-gpu) ensures the glow shows on mobile */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[140%] h-[40%] bg-[#b87209]/20 blur-[100px] rounded-full transform-gpu opacity-100" />
       </div>
 
       {/* --- HERO SECTION --- */}
-      {/* Added pt-28 to ensure content fits below the fixed header on mobile */}
       <div className="text-center space-y-6 max-w-5xl px-6 pt-28 md:pt-40 relative z-10">
         <div className="inline-block border border-[#b87209]/40 px-4 py-1 mb-6">
           <h2 className="text-[#b87209] text-[10px] font-black uppercase tracking-[0.5em] animate-pulse">
@@ -86,9 +83,7 @@ export default function HomePage() {
         </div>
 
         <div className="flex flex-col items-center justify-center space-y-6">
-          {/* NollyWallet handles the logic; UI is dictated by your design system */}
           <NollyWallet className="w-full" />
-
           <p className="text-[9px] text-gray-500 uppercase font-black tracking-[0.3em]">
             {isConnected ? "Welcome, Producer" : "Authorized via Base Mainnet"}
           </p>
@@ -145,7 +140,7 @@ export default function HomePage() {
             </p>
           </div>
 
-          {/* Card: Founder's Cut (Enhanced Glow Card) */}
+          {/* Card: Founder's Cut */}
           <div className="p-8 bg-[#b87209]/5 border border-[#b87209]/40 shadow-[0_0_40px_rgba(184,114,9,0.15)] relative overflow-hidden transform-gpu">
             <div className="absolute top-0 right-0 p-2 opacity-30">
               <div className="w-12 h-12 border-t-2 border-r-2 border-[#b87209]"></div>

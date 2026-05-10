@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useAccount, useDisconnect } from "wagmi";
 import { useRouter } from "next/navigation";
-import { Copy, Share2, Play, CircleStop } from "lucide-react";
+import { Copy, Share2, Play } from "lucide-react"; // Removed CircleStopimport { Copy, Share2, Play, CircleStop } from "lucide-react";
 
 export default function Dashboard() {
   const { address, isConnected } = useAccount();
