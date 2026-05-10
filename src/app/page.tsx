@@ -27,12 +27,10 @@ export default function HomePage() {
 
   return (
     <main className="flex flex-col items-center min-h-screen bg-black text-white selection:bg-[#b87209] selection:text-black overflow-x-hidden relative">
-      {/* --- NOIR AMBIANCE (GLOW RESTORATION) --- */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[140%] h-[40%] bg-[#b87209]/20 blur-[100px] rounded-full transform-gpu opacity-100" />
       </div>
 
-      {/* --- HERO SECTION --- */}
       <div className="text-center space-y-6 max-w-5xl px-6 pt-28 md:pt-40 relative z-10">
         <div className="inline-block border border-[#b87209]/40 px-4 py-1 mb-6">
           <h2 className="text-[#b87209] text-[10px] font-black uppercase tracking-[0.5em] animate-pulse">
@@ -57,7 +55,6 @@ export default function HomePage() {
         </p>
       </div>
 
-      {/* --- MINIMALIST GOLD GLOW MARQUEE --- */}
       <div className="w-full mt-12 py-6 bg-[#b87209]/5 border-y border-[#b87209]/20 relative z-10 overflow-hidden shadow-[0_0_25px_rgba(0,0,0,0.5)]">
         <div className="flex animate-marquee whitespace-nowrap">
           {[...Array(6)].map((_, i) => (
@@ -76,7 +73,6 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* --- AUTH PORTAL (CENTERED) --- */}
       <div className="mt-16 w-[90%] max-w-sm bg-black border border-[#b87209]/30 p-10 backdrop-blur-xl relative z-20 shadow-[0_20px_50px_rgba(0,0,0,0.8)] transform-gpu">
         <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#b87209] text-black text-[10px] font-black px-6 py-1 uppercase tracking-widest whitespace-nowrap text-center">
           Executive Access
@@ -90,7 +86,6 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* --- PRODUCTION PROTOCOL --- */}
       <div className="mt-24 w-full max-w-6xl px-6 pb-24 relative z-10">
         <div className="flex items-center space-x-4 mb-12">
           <div className="h-[1px] flex-1 bg-[#b87209]/30" />
@@ -101,7 +96,6 @@ export default function HomePage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          {/* Card 01 */}
           <div className="group p-8 bg-white/[0.02] border border-white/5 hover:border-[#b87209]/50 transition-all duration-500">
             <div className="text-4xl font-black italic mb-4 transition-colors text-[#b87209] drop-shadow-[0_0_10px_rgba(184,114,9,0.8)] md:text-[#b87209]/10 md:drop-shadow-none md:group-hover:text-[#b87209] md:group-hover:drop-shadow-[0_0_10px_rgba(184,114,9,0.5)]">
               01
@@ -114,7 +108,6 @@ export default function HomePage() {
             </p>
           </div>
 
-          {/* Card 02 */}
           <div className="group p-8 bg-white/[0.02] border border-white/5 hover:border-[#b87209]/50 transition-all duration-500">
             <div className="text-4xl font-black italic mb-4 transition-colors text-[#b87209] drop-shadow-[0_0_10px_rgba(184,114,9,0.8)] md:text-[#b87209]/10 md:drop-shadow-none md:group-hover:text-[#b87209] md:group-hover:drop-shadow-[0_0_10px_rgba(184,114,9,0.5)]">
               02
@@ -127,7 +120,6 @@ export default function HomePage() {
             </p>
           </div>
 
-          {/* Card 03 */}
           <div className="group p-8 bg-white/[0.02] border border-white/5 hover:border-[#b87209]/50 transition-all duration-500">
             <div className="text-4xl font-black italic mb-4 transition-colors text-[#b87209] drop-shadow-[0_0_10px_rgba(184,114,9,0.8)] md:text-[#b87209]/10 md:drop-shadow-none md:group-hover:text-[#b87209] md:group-hover:drop-shadow-[0_0_10px_rgba(184,114,9,0.5)]">
               03
@@ -140,7 +132,6 @@ export default function HomePage() {
             </p>
           </div>
 
-          {/* Card: Founder's Cut */}
           <div className="p-8 bg-[#b87209]/5 border border-[#b87209]/40 shadow-[0_0_40px_rgba(184,114,9,0.15)] relative overflow-hidden transform-gpu">
             <div className="absolute top-0 right-0 p-2 opacity-30">
               <div className="w-12 h-12 border-t-2 border-r-2 border-[#b87209]"></div>
