@@ -14,13 +14,13 @@ export default function Navbar() {
   }, []);
 
   // Prevent layout shift during hydration
-  if (!mounted) return <div className="h-[100px] bg-black" />;
+  if (!mounted) return <div className="h-[92px] bg-black" />;
 
   return (
-    <nav className="w-full z-[100] relative bg-black border-b border-white/5">
+    <nav className="w-full z-[100] relative bg-black border-b border-white/5 overflow-x-hidden">
       {/* --- THE COLORFUL MARQUEE BAR --- */}
-      {/* 'group' allows us to pause the animation when the user hovers to read/click a link */}
-      <div className="bg-[#1d02cb] py-2 overflow-hidden whitespace-nowrap border-b border-[#b87209]/30 group cursor-default">
+      {/* 'group' allows us to pause the animation on hover */}
+      <div className="w-full bg-[#1d02cb] py-2 overflow-hidden whitespace-nowrap border-b border-[#b87209]/30 group cursor-default">
         <div className="inline-block animate-marquee whitespace-nowrap group-hover:[animation-play-state:paused]">
           {[...Array(8)].map((_, i) => (
             <span
@@ -57,18 +57,18 @@ export default function Navbar() {
       </div>
 
       {/* --- NAVIGATION & WALLET BAR --- */}
-      <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-        {/* LOGO: Points back to the Homepage ("/") */}
-        <Link href="/" className="group cursor-pointer">
-          <h1 className="text-2xl font-black italic tracking-tighter text-white transition-transform group-hover:scale-105">
+      <div className="max-w-7xl mx-auto px-4 md:px-6 py-4 flex justify-between items-center gap-2">
+        {/* LOGO: Shrinks slightly on mobile to save space */}
+        <Link href="/" className="group cursor-pointer shrink-0">
+          <h1 className="text-xl md:text-2xl font-black italic tracking-tighter text-white transition-transform group-hover:scale-105">
             NOLLY<span className="text-[#b87209]">WIN</span>
           </h1>
         </Link>
 
         {/* NAVIGATION LINKS & WALLET SECTION */}
-        <div className="flex items-center gap-6 md:gap-10">
-          {/* Desktop Navigation */}
-          <div className="flex items-center gap-4 md:gap-8 mr-2 md:mr-4">
+        <div className="flex items-center gap-3 md:gap-10">
+          {/* Desktop Navigation: Hidden on small screens to prevent crowding */}
+          <div className="hidden md:flex items-center gap-8 mr-4">
             {[
               { name: "Home", path: "/" },
               { name: "Dashboard", path: "/dashboard" },
@@ -89,9 +89,12 @@ export default function Navbar() {
           </div>
 
           {/* SHARED WALLET COMPONENT: 
-              Using scale-90 to make it slightly sleeker for the header 
+              - scale-75 on mobile (very small screens)
+              - scale-90 on tablets/desktop
           */}
-          <NollyWallet className="transform scale-90 origin-right" />
+          <div className="flex items-center">
+            <NollyWallet className="transform scale-75 sm:scale-90 origin-right" />
+          </div>
         </div>
       </div>
     </nav>
