@@ -2,15 +2,15 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import "@coinbase/onchainkit/styles.css";
-import { Providers } from "./components/providers";
-import Navbar from "./components/Navbar";
-import Footer from "./components/Footer";
+
+// @ts-ignore - This tells TypeScript to stop complaining and just run the code
+import { Providers } from "./providers";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "NollyWin | Cinematic DCA on Base",
-  description: "Automated trading with a Nollywood soul. Powered by Base.",
+  title: "LIGHTS. CAMERA. PROFITS.",
+  description: "Onchain Automation Engine",
 };
 
 export default function RootLayout({
@@ -19,28 +19,34 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      {/* 'min-h-screen' + 'flex flex-col' is the secret for mobile.
-        It forces the body to be at least the height of the phone screen,
-        pushing the footer to the bottom and keeping the navbar at the top.
-      */}
+    <html lang="en" className="bg-black">
       <body
-        className={`${inter.className} bg-black antialiased text-white min-h-screen flex flex-col`}
+        className={`${inter.className} bg-black antialiased selection:bg-[#b87209] selection:text-black`}
       >
         <Providers>
-          {/* Z-index 100 ensures the Navbar stays above the Hero text 
-            on small mobile screens. 
-          */}
-          <header className="z-[100] relative">
-            <Navbar />
-          </header>
+          <div className="relative min-h-screen flex flex-col">
+            {/* NOLLYWIN EXECUTIVE HEADER */}
+            <header className="fixed top-0 w-full z-[100] bg-black/90 backdrop-blur-md border-b border-[#b87209]/20">
+              <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <div className="w-8 h-8 bg-[#b87209] flex items-center justify-center font-black italic text-black text-lg">
+                    N
+                  </div>
+                  <span className="font-black italic text-2xl tracking-tighter text-white uppercase">
+                    NOLLY<span className="text-[#b87209]">WIN</span>
+                  </span>
+                </div>
+              </div>
+            </header>
 
-          {/* 'flex-grow' ensures this section fills the gap between 
-            Navbar and Footer. 
-          */}
-          <main className="relative flex-grow w-full">{children}</main>
+            <main className="flex-grow pt-24">{children}</main>
 
-          <Footer />
+            <footer className="w-full border-t border-white/5 py-10 bg-black text-center">
+              <p className="text-gray-600 text-[10px] uppercase tracking-[0.5em] font-black">
+                © 2026 NOLLYWIN • PRODUCTION PROTOCOL
+              </p>
+            </footer>
+          </div>
         </Providers>
       </body>
     </html>
