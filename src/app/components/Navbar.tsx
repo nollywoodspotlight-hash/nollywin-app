@@ -68,7 +68,7 @@ export default function Navbar() {
         {/* NAVIGATION LINKS & WALLET SECTION */}
         <div className="flex items-center gap-6 md:gap-10">
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center gap-8 mr-4">
+          <div className="flex items-center gap-4 md:gap-8 mr-2 md:mr-4">
             {[
               { name: "Home", path: "/" },
               { name: "Dashboard", path: "/dashboard" },
