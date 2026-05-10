@@ -3,7 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import "@coinbase/onchainkit/styles.css";
 import { Providers } from "./components/providers";
-import navbar from "./components/navbar"; // Importing the restored navigation/ticker
+import Navbar from "./components/Navbar"; // Capital N
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -21,10 +21,8 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${inter.className} bg-black antialiased text-white`}>
         <Providers>
-          {/* The Navbar is placed inside Providers so it can 
-              potentially access wallet state later if needed.
-          */}
-          <navbar />
+          {/* FIXED: Changed from <navbar /> to <Navbar /> */}
+          <Navbar />
 
           <main className="relative">{children}</main>
         </Providers>

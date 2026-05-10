@@ -9,21 +9,13 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Keeping your custom nolly palette and adding the dashboard gold
         nolly: {
           gold: "#FFD700",
-          accent: "#b87209", // The specific gold used in your buttons/borders
+          accent: "#b87209",
           red: "#E50914",
           black: "#0A0A0A",
-          gray: "#1F1F1F",
         },
       },
-      backgroundImage: {
-        "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
-        "gradient-conic":
-          "conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))",
-      },
-      // --- MARQUEE ANIMATION LOGIC ---
       animation: {
         marquee: "marquee 30s linear infinite",
       },
