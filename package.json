@@ -1,8 +1,10 @@
 {
-<<<<<<< HEAD
   "name": "nollywin-app",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "20.x"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -14,8 +16,10 @@
     "@coinbase/onchainkit": "^1.1.2",
     "@farcaster/auth-client": "^0.7.1",
     "@farcaster/frame-sdk": "^0.2.0",
-    "@supabase/supabase-js": "^2.105.3",
+    "@supabase/supabase-js": "^2.105.4",
     "@tanstack/react-query": "^5.100.8",
+    "dotenv": "^17.4.2",
+    "ethers": "^6.16.0",
     "lucide-react": "^1.14.0",
     "next": "^15.5.18",
     "react": "^19.2.6",
@@ -26,39 +30,20 @@
     "zustand": "^5.0.12"
   },
   "devDependencies": {
+    "@nomicfoundation/hardhat-ethers": "^4.0.9",
+    "@nomicfoundation/hardhat-toolbox-mocha-ethers": "^3.0.4",
+    "@openzeppelin/contracts": "^5.0.0",
     "@tailwindcss/postcss": "^4.2.4",
     "@types/node": "^20",
     "@types/react": "^18.3.28",
     "@types/react-dom": "^18.3.7",
     "eslint": "^9",
     "eslint-config-next": "^15.5.0",
+    "hardhat": "^3.4.2",
     "tailwindcss": "^4",
     "typescript": "^5.8.3"
   },
   "overrides": {
     "axios": "^1.6.0"
-=======
-  "name": "nollylaunch",
-  "version": "1.0.0",
-  "main": "deploy.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
-  "devDependencies": {
-    "@nomicfoundation/hardhat-ethers": "^4.0.9",
-    "@nomicfoundation/hardhat-toolbox-mocha-ethers": "^3.0.4",
-    "@openzeppelin/contracts": "^5.0.0",
-    "dotenv": "^17.4.2",
-    "ethers": "^6.16.0",
-    "hardhat": "^3.4.2"
-  },
-  "type": "module",
-  "dependencies": {
-    "@supabase/supabase-js": "^2.105.4"
->>>>>>> 1308352bd78cc6b1899c126474a1bf94e74a85db
   }
 }
