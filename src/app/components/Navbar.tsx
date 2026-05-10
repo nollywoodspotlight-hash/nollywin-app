@@ -1,102 +1,119 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import NollyWallet from "./NollyWallet";
+import React, { useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { ConnectWallet, Wallet } from "@coinbase/onchainkit/wallet";
+import { Menu, X } from "lucide-react";
 
 export default function Navbar() {
-  const pathname = usePathname();
-  const [mounted, setMounted] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const router = useRouter();
 
-  useEffect(() => {
-    setMounted(true);
+  const handleConnect = useCallback(() => {
+    setIsMenuOpen(false);
+    // Navigation to dashboard is handled by the useEffect listener in page.tsx
   }, []);
 
-  // Prevent layout shift during hydration
-  if (!mounted) return <div className="h-[92px] bg-black" />;
-
   return (
-    <nav className="w-full z-[100] relative bg-black border-b border-white/5 overflow-x-hidden">
-      {/* --- THE COLORFUL MARQUEE BAR --- */}
-      {/* 'group' allows us to pause the animation on hover */}
-      <div className="w-full bg-[#1d02cb] py-2 overflow-hidden whitespace-nowrap border-b border-[#b87209]/30 group cursor-default">
-        <div className="inline-block animate-marquee whitespace-nowrap group-hover:[animation-play-state:paused]">
-          {[...Array(8)].map((_, i) => (
-            <span
-              key={i}
-              className="text-[10px] font-black uppercase tracking-[0.3em] mx-10"
+    <header className="fixed top-0 left-0 w-full z-[9999] bg-black/95 backdrop-blur-sm border-b border-[#b87209]/30 h-20 transform-gpu">
+      <div className="max-w-7xl mx-auto px-4 h-full flex items-center justify-between">
+        {/* --- BRAND LOGO --- */}
+        <div
+          className="flex items-center cursor-pointer shrink-0"
+          onClick={() => router.push("/")}
+        >
+          <div className="w-8 h-8 bg-[#b87209] flex items-center justify-center font-black italic text-black mr-2 shadow-[0_0_15px_rgba(184,114,9,0.3)]">
+            B
+          </div>
+          <span className="font-black italic text-xl text-white uppercase tracking-tighter">
+            THE <span className="text-[#b87209]">STUDIO</span>
+          </span>
+        </div>
+
+        {/* --- NAVIGATION & ACTIONS --- */}
+        <div className="flex items-center space-x-3 sm:space-x-4">
+          {/* MOBILE CONNECT BUTTON (Fits perfectly on small screens) */}
+          <div className="md:hidden flex items-center shrink-0">
+            <Wallet>
+              <ConnectWallet
+                onConnect={handleConnect}
+                className="!flex bg-[#b87209] text-black font-black italic text-[10px] uppercase py-2 px-4 rounded-none border border-transparent hover:bg-white hover:text-black transition-all transform-gpu active:scale-95"
+              >
+                Connect
+              </ConnectWallet>
+            </Wallet>
+          </div>
+
+          {/* DESKTOP LINKS & BUTTON */}
+          <nav className="hidden md:flex items-center space-x-8 mr-4">
+            <a
+              href="#"
+              className="text-white/70 font-black italic uppercase text-xs tracking-widest hover:text-[#b87209] transition-colors"
             >
-              {/* Future clickable strategy/RSS links go inside these <a> tags */}
-              <a
-                href="#"
-                className="text-white hover:text-yellow-400 transition-colors"
-              >
-                🚀 LIVE PRODUCTION: BASE MAINNET ACTIVE
-              </a>
-              <span className="text-[#b87209] mx-6">|</span>
+              Archives
+            </a>
+            <a
+              href="#"
+              className="text-white/70 font-black italic uppercase text-xs tracking-widest hover:text-[#b87209] transition-colors"
+            >
+              Cinema
+            </a>
+          </nav>
 
-              <a
-                href="#"
-                className="text-yellow-400 hover:text-white transition-colors"
+          <div className="hidden md:flex items-center">
+            <Wallet>
+              <ConnectWallet
+                onConnect={handleConnect}
+                className="bg-[#b87209] text-black font-black italic text-[11px] uppercase py-3 px-6 rounded-none hover:bg-white transition-all shadow-[0_0_20px_rgba(184,114,9,0.2)]"
               >
-                🎬 1% FOUNDER ROYALTIES ENABLED
-              </a>
-              <span className="text-[#b87209] mx-6">|</span>
+                Connect Wallet
+              </ConnectWallet>
+            </Wallet>
+          </div>
 
-              <a
-                href="#"
-                className="text-cyan-400 hover:text-white transition-colors"
-              >
-                💎 NOLLYWIN DEPLOYMENT SUCCESSFUL
-              </a>
-              <span className="text-[#b87209] mx-6">|</span>
-            </span>
-          ))}
+          {/* MOBILE MENU TOGGLE */}
+          <button
+            className="md:hidden p-2 text-[#b87209] border border-[#b87209]/20 hover:bg-[#b87209]/10 transition-all"
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            aria-label="Toggle Navigation"
+          >
+            {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
         </div>
       </div>
 
-      {/* --- NAVIGATION & WALLET BAR --- */}
-      <div className="max-w-7xl mx-auto px-4 md:px-6 py-4 flex justify-between items-center gap-2">
-        {/* LOGO: Shrinks slightly on mobile to save space */}
-        <Link href="/" className="group cursor-pointer shrink-0">
-          <h1 className="text-xl md:text-2xl font-black italic tracking-tighter text-white transition-transform group-hover:scale-105">
-            NOLLY<span className="text-[#b87209]">WIN</span>
-          </h1>
-        </Link>
-
-        {/* NAVIGATION LINKS & WALLET SECTION */}
-        <div className="flex items-center gap-3 md:gap-10">
-          {/* Desktop Navigation: Hidden on small screens to prevent crowding */}
-          <div className="hidden md:flex items-center gap-8 mr-4">
-            {[
-              { name: "Home", path: "/" },
-              { name: "Dashboard", path: "/dashboard" },
-              { name: "Archive", path: "/archive" },
-            ].map((link) => (
-              <Link
-                key={link.path}
-                href={link.path}
-                className={`text-[10px] font-black uppercase tracking-[0.25em] transition-all hover:text-[#b87209] ${
-                  pathname === link.path
-                    ? "text-[#b87209] border-b-2 border-[#b87209] pb-1"
-                    : "text-gray-400"
-                }`}
+      {/* --- MOBILE NOIR DROPDOWN --- */}
+      {isMenuOpen && (
+        <div className="fixed inset-x-0 top-20 bg-black border-b border-[#b87209]/40 p-8 flex flex-col space-y-8 z-[10000] animate-in fade-in slide-in-from-top-4 duration-300">
+          <nav className="flex flex-col space-y-6">
+            <div className="space-y-1">
+              <p className="text-[#b87209]/50 text-[10px] font-black uppercase tracking-[0.3em] mb-2">
+                Navigation
+              </p>
+              <a
+                href="#"
+                className="block text-[#b87209] font-black italic uppercase text-3xl hover:translate-x-2 transition-transform"
+                onClick={() => setIsMenuOpen(false)}
               >
-                {link.name}
-              </Link>
-            ))}
-          </div>
+                Archives
+              </a>
+            </div>
+            <a
+              href="#"
+              className="block text-white font-black italic uppercase text-3xl hover:text-[#b87209] hover:translate-x-2 transition-transform"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              Cinema
+            </a>
+          </nav>
 
-          {/* SHARED WALLET COMPONENT: 
-              - scale-75 on mobile (very small screens)
-              - scale-90 on tablets/desktop
-          */}
-          <div className="flex items-center">
-            <NollyWallet className="transform scale-75 sm:scale-90 origin-right" />
+          <div className="pt-6 border-t border-white/5">
+            <p className="text-white/30 text-[9px] font-black uppercase tracking-widest italic">
+              Nollywin Design Protocol v1.0
+            </p>
           </div>
         </div>
-      </div>
-    </nav>
+      )}
+    </header>
   );
 }

@@ -9,8 +9,13 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Adding the Nollywin Gold accent here
+        // Primary Nollywin Gold
         gold: "#b87209",
+      },
+      // Cinematic Noir Glow effects
+      dropShadow: {
+        gold: "0 0 20px rgba(184, 114, 9, 0.5)",
+        "gold-strong": "0 0 35px rgba(184, 114, 9, 0.7)",
       },
       animation: {
         marquee: "marquee 90s linear infinite",
@@ -25,4 +30,5 @@ const config: Config = {
   },
   plugins: [],
 };
+
 export default config;
