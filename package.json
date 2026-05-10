@@ -1,0 +1,24 @@
+{
+  "name": "nollylaunch",
+  "version": "1.0.0",
+  "main": "deploy.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-ethers": "^4.0.9",
+    "@nomicfoundation/hardhat-toolbox-mocha-ethers": "^3.0.4",
+    "@openzeppelin/contracts": "^5.0.0",
+    "dotenv": "^17.4.2",
+    "ethers": "^6.16.0",
+    "hardhat": "^3.4.2"
+  },
+  "type": "module",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.105.4"
+  }
+}
