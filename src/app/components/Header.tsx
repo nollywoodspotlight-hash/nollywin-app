@@ -19,7 +19,7 @@ export default function Header() {
       <div className="max-w-7xl mx-auto px-4 h-20 flex items-center justify-between">
         {/* Logo Section */}
         <div
-          className="flex items-center space-x-2 cursor-pointer"
+          className="flex items-center space-x-2 cursor-pointer shrink-0"
           onClick={() => router.push("/")}
         >
           <div className="w-8 h-8 bg-[#b87209] flex items-center justify-center font-black italic text-black">
@@ -31,22 +31,21 @@ export default function Header() {
         </div>
 
         {/* Action Buttons Container */}
-        <div className="flex items-center space-x-4">
-          {/* MOBILE PAGE BUTTON: 
-              Visible on mobile (flex), hidden on medium screens (md:hidden)
-          */}
-          <div className="flex md:hidden">
+        <div className="flex items-center justify-end space-x-2 sm:space-x-4">
+          {/* MOBILE WALLET BUTTON - Forced Visibility */}
+          <div className="md:hidden flex items-center min-w-[100px]">
             <Wallet>
               <ConnectWallet
                 onConnect={handleConnect}
-                className="bg-[#b87209] text-black font-black italic text-[10px] uppercase py-2 px-4 rounded-none hover:bg-white transition-all"
+                /* Added !important via square brackets to override OnchainKit defaults */
+                className="!flex bg-[#b87209] text-black font-black italic text-[10px] uppercase py-2 px-3 rounded-none hover:bg-white transition-all whitespace-nowrap"
               >
                 Connect
               </ConnectWallet>
             </Wallet>
           </div>
 
-          {/* DESKTOP PAGE BUTTON */}
+          {/* DESKTOP WALLET BUTTON */}
           <div className="hidden md:flex items-center">
             <Wallet>
               <ConnectWallet
@@ -60,10 +59,17 @@ export default function Header() {
 
           {/* HAMBURGER MENU TOGGLE */}
           <button
-            className="md:hidden text-[#b87209]"
+            className="p-2 text-[#b87209] hover:bg-[#b87209]/10 transition-colors"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
+            aria-label="Toggle Menu"
           >
-            {isMenuOpen ? <X size={28} /> : <Menu size={28} />}
+            <div className="md:hidden">
+              {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+            </div>
+            {/* Keeping Menu visible on desktop only if you have links to show */}
+            <div className="hidden md:block">
+              <Menu size={24} />
+            </div>
           </button>
         </div>
       </div>
@@ -74,13 +80,13 @@ export default function Header() {
           <nav className="flex flex-col space-y-4">
             <a
               href="#"
-              className="text-white font-black italic uppercase text-lg"
+              className="text-white font-black italic uppercase text-lg hover:text-[#b87209]"
             >
               Archives
             </a>
             <a
               href="#"
-              className="text-white font-black italic uppercase text-lg"
+              className="text-white font-black italic uppercase text-lg hover:text-[#b87209]"
             >
               Cinema
             </a>
