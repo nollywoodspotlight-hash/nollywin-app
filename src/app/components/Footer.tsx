@@ -45,10 +45,10 @@ export default function Footer() {
           <div className="md:text-right flex flex-col md:items-end justify-between h-full">
             <div className="space-y-1">
               <p className="text-gray-700 text-[8px] font-black uppercase tracking-[1em]">
-                Studio City
+                Nollywood City
               </p>
               <p className="text-gray-800 text-[7px] font-black uppercase tracking-[0.5em]">
-                Lagos • London • Onchain
+                Lagos • Galveston • Onchain
               </p>
             </div>
             <p className="mt-8 md:mt-0 text-gray-500 text-[9px] font-bold uppercase tracking-widest">
