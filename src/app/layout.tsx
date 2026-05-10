@@ -3,7 +3,8 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import "@coinbase/onchainkit/styles.css";
 import { Providers } from "./components/providers";
-import Navbar from "./components/Navbar"; // Capital N
+import Navbar from "./components/Navbar";
+import Footer from "./components/Footer"; // Import the new Footer component
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -19,12 +20,21 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={`${inter.className} bg-black antialiased text-white`}>
+      {/* Added 'min-h-screen' and 'flex flex-col' to the body 
+          so that the footer can be pushed to the bottom. 
+      */}
+      <body
+        className={`${inter.className} bg-black antialiased text-white min-h-screen flex flex-col`}
+      >
         <Providers>
-          {/* FIXED: Changed from <navbar /> to <Navbar /> */}
           <Navbar />
 
-          <main className="relative">{children}</main>
+          {/* 'flex-grow' ensures this main area takes up all available space, 
+              forcing the footer to the bottom of the screen. 
+          */}
+          <main className="relative flex-grow">{children}</main>
+
+          <Footer />
         </Providers>
       </body>
     </html>
