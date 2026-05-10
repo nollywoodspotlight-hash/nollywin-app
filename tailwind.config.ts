@@ -8,8 +8,11 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      colors: {
+        // Adding the Nollywin Gold accent here
+        gold: "#b87209",
+      },
       animation: {
-        // This links to the keyframes below
         marquee: "marquee 90s linear infinite",
       },
       keyframes: {
