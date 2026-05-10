@@ -60,7 +60,7 @@ export default function HomePage() {
       {/* --- GOLD GLOW MARQUEE (ONE PHRASE PER SECTION) --- */}
       <div className="w-full mt-12 py-4 bg-[#b87209]/5 border-y border-[#b87209]/20 relative z-10 overflow-hidden shadow-[0_0_20px_rgba(184,114,9,0.1)]">
         <div className="flex animate-marquee whitespace-nowrap">
-          {[...Array(6)].map((_, i) => (
+          {[...Array(1)].map((_, i) => (
             <span key={i} className="flex items-center mx-24 md:mx-48">
               <span className="text-[#b87209] font-black italic uppercase text-sm tracking-[0.3em] drop-shadow-[0_0_8px_rgba(184,114,9,0.4)]">
                 DEPLOYING ON BASE
