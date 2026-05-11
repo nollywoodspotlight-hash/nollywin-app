@@ -13,7 +13,7 @@ export default function DashboardPage() {
   const [isTradeActive, setIsTradeActive] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  // NEW: Hook to trigger wallet authorization
+  // Hook to trigger wallet authorization
   const { sendTransaction } = useSendTransaction();
 
   // INTERACTIVE CONFIGURATION [Master Spec 2.0]
@@ -27,29 +27,48 @@ export default function DashboardPage() {
     ? `https://nollywin.com/join?ref=${address}`
     : "Connect Wallet";
 
-  // UPDATED: Logic 7.1 with Wallet Authorization
+  // MASTER DEV UPDATE: Logic 7.1 - Connects UI to Blockchain + Supabase
   const handleTradeAction = async (e: React.MouseEvent) => {
     e.preventDefault();
 
-    // If turning ON the bot
     if (!isTradeActive) {
+      // 1. Validation
       if (contractAddress.length < 42) {
         alert("Invalid Base Contract Address");
         return;
       }
 
       try {
-        // TRIGGER WALLET NOTIFICATION
-        // NOTE: Replace '0x0000...' with the actual NollyWin Vault address
+        // 2. TRIGGER WALLET NOTIFICATION (Pay the protocol)
+        // REPLACE this 0x000 with your real Vault/Treasury address
         sendTransaction({
           to: "0x0000000000000000000000000000000000000000" as `0x${string}`,
           value: parseEther(dcaAmount),
         });
 
+        // 3. SAVE TO SUPABASE (Wake up the Bot)
+        // This calls the API route we built earlier
+        const response = await fetch("/api/activate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            wallet_address: address,
+            contract_address: contractAddress,
+            amount: dcaAmount,
+            frequency: frequency,
+            multiplier: sellMultiplier,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to save strategy to database.");
+        }
+
         setIsTradeActive(true);
+        console.log("🚀 Production Started: Strategy synced to Supabase.");
       } catch (error) {
-        console.error("Wallet denied or failed:", error);
-        alert("Transaction failed or was rejected.");
+        console.error("❌ Startup Failed:", error);
+        alert("Could not start production. Check console for details.");
       }
     } else {
       // Manual Override / Abort logic
@@ -243,7 +262,9 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <footer className="mt-16 opacity-20 text-[8px] uppercase tracking-[0.4em] text-center italic font-black"></footer>
+        <footer className="mt-16 opacity-20 text-[8px] uppercase tracking-[0.4em] text-center italic font-black">
+          © 2026 NollyWin Productions • Onchain Non-Custodial [Spec 8.3]
+        </footer>
       </div>
     </div>
   );
