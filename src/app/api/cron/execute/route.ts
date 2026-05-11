@@ -1,45 +1,71 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import { executeSwap } from "@/lib/swap"; // This imports the tool we just made!
 
-// 1. Connect to your "Memory"
 const supabase = createClient(
   process.env.SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
 
-export async function GET() {
-  // 2. SCAN: Find only the ACTIVE strategies (using the Index you just built!)
-  const { data: activeStrategies } = await supabase
+export async function GET(req: Request) {
+  // 1. Security Check: Only allow Vercel Crons to trigger this
+  const authHeader = req.headers.get("authorization");
+  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    return new Response("Unauthorized", { status: 401 });
+  }
+
+  // 2. SCAN: Find ACTIVE strategies
+  const { data: activeStrategies, error: fetchError } = await supabase
     .from("strategies")
     .select("*")
     .eq("lifecycle_state", "ACTIVE");
 
-  if (!activeStrategies || activeStrategies.length === 0) {
-    return NextResponse.json({ message: "No active trades to process." });
+  if (fetchError || !activeStrategies || activeStrategies.length === 0) {
+    return NextResponse.json({ message: "No active trades found." });
   }
 
-  // 3. EXECUTE: Loop through them (Logic 7.1)
+  // 3. EXECUTE: The Loop
   for (const strategy of activeStrategies) {
     try {
-      console.log(`Processing trade for ${strategy.wallet_address}...`);
+      console.log(`🤖 Bot checking trade for: ${strategy.wallet_address}`);
 
-      // HERE IS WHERE THE REAL MAGIC HAPPENS:
-      // In a full setup, you would call 1inch/0x API to swap ETH for
-      // the 'target_contract_address' stored in your table.
+      // CALL THE SWAP ENGINE
+      const swapResult = await executeSwap(
+        "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee", // ETH
+        strategy.target_contract_address,
+        strategy.dca_amount_eth.toString(),
+        strategy.wallet_address,
+      );
 
-      // For now, we update the database to show the trade is in progress
-      await supabase
-        .from("strategies")
-        .update({ tx_hash: "PENDING_ON_CHAIN" })
-        .eq("id", strategy.id);
-    } catch (error) {
-      // 4. STALL PROTECTION: If it fails, increment stall count (Spec 15.0)
+      if (swapResult.success) {
+        // SUCCESS: Update database with the transaction data
+        await supabase
+          .from("strategies")
+          .update({
+            tx_hash: swapResult.tx.hash,
+            // In a real bot, we would sign this here.
+            // For now, we mark it as 'PROCESSED'
+          })
+          .eq("id", strategy.id);
+
+        console.log(`✅ Swap data prepared for ${strategy.id}`);
+      } else {
+        // TRIGGER STALL: 1inch couldn't find a route
+        throw new Error(swapResult.error);
+      }
+    } catch (error: any) {
+      // 4. STALL PROTECTION [Spec 15.0]
+      console.error(`⚠️ Stall detected: ${error.message}`);
+
       const newStallCount = (strategy.stall_count || 0) + 1;
       const newState = newStallCount >= 3 ? "CANCELLED" : "STALLED";
 
       await supabase
         .from("strategies")
-        .update({ stall_count: newStallCount, lifecycle_state: newState })
+        .update({
+          stall_count: newStallCount,
+          lifecycle_state: newState,
+        })
         .eq("id", strategy.id);
     }
   }
