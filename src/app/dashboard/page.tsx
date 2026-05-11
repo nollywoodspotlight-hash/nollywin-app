@@ -7,7 +7,6 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const dynamic = "force-dynamic";
 
-// 5.1 ENUM Mapping [Master Spec 5.1]
 const LifecycleState: Record<number, string> = {
   0: "ACTIVE",
   1: "PAUSED",
@@ -21,12 +20,10 @@ export default function DashboardPage() {
   const [copied, setCopied] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
 
-  // --- VARIABLE DEFINITION FIX ---
   const referralLink = address
     ? `https://nollywin.com/join?ref=${address}`
-    : "Connect Wallet to generate link";
+    : "Connect Wallet";
 
-  // Strategy Data [Master Specs 2.0]
   const strategyData = {
     token_ticker: "DEGEN",
     dca_amount: "0.01",
@@ -39,7 +36,6 @@ export default function DashboardPage() {
   const handleExecute = async (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsExecuting(true);
-    // 6.2 Processing Logic: execute_trade_cycle()
     setTimeout(() => setIsExecuting(false), 2000);
   };
 
@@ -56,105 +52,101 @@ export default function DashboardPage() {
     <div
       className={`${inter.className} min-h-screen bg-black text-white antialiased`}
     >
-      {/* Cinematic Background Layer */}
-      <div className="fixed inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(184,114,9,0.08),transparent_50%)] pointer-events-none" />
+      <div className="fixed inset-0 bg-[radial-gradient(circle_at_50%_10%,rgba(184,114,9,0.1),transparent_60%)] pointer-events-none" />
 
-      <div className="relative z-30 max-w-5xl mx-auto px-5 pt-32 pb-20 pointer-events-auto">
-        {/* HEADER */}
-        <div className="border-l-4 border-[#b87209] pl-6 mb-12 italic">
-          <h1 className="text-3xl md:text-6xl font-black uppercase tracking-tighter text-white leading-none">
+      <div className="relative z-30 max-w-5xl mx-auto px-4 pt-24 pb-12 pointer-events-auto">
+        {/* HEADER - Scaled down for mobile */}
+        <div className="border-l-2 md:border-l-4 border-[#b87209] pl-4 mb-8 italic">
+          <h1 className="text-xl md:text-5xl font-black uppercase tracking-tighter text-white leading-none">
             Production <span className="text-[#b87209]">Dashboard</span>
           </h1>
-          <p className="text-gray-500 uppercase tracking-[0.3em] text-[10px] md:text-xs mt-2 font-bold">
-            Authorized Production: {address ? address.slice(0, 10) : "0x000..."}
+          <p className="text-gray-500 uppercase tracking-widest text-[8px] md:text-xs mt-1 font-bold">
+            ID:{" "}
+            {address
+              ? `${address.slice(0, 6)}...${address.slice(-4)}`
+              : "Not Connected"}
           </p>
         </div>
 
-        {/* UNIFIED TRADING CONSOLE */}
-        <div className="bg-[#080808] border border-[#b87209]/30 rounded-sm overflow-hidden shadow-[0_0_50px_rgba(0,0,0,1)]">
-          <div className="bg-[#b87209]/10 border-b border-[#b87209]/20 px-6 py-3 flex justify-between items-center">
-            <span className="text-[10px] font-black uppercase tracking-widest italic text-[#b87209]">
-              Script Config & Execution
+        {/* TRADING CONSOLE */}
+        <div className="bg-[#080808] border border-[#b87209]/30 rounded-sm overflow-hidden">
+          <div className="bg-[#b87209]/10 border-b border-[#b87209]/20 px-4 py-2 flex justify-between items-center">
+            <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest italic text-[#b87209]">
+              Execution Console
             </span>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <span
-                className={`w-2 h-2 rounded-full animate-pulse ${
+                className={`w-1.5 h-1.5 rounded-full animate-pulse ${
                   strategyData.lifecycle_state === 0
                     ? "bg-[#b87209]"
                     : "bg-red-600"
                 }`}
               />
-              <span className="text-[10px] font-black uppercase italic">
+              <span className="text-[8px] md:text-[10px] font-black uppercase italic">
                 {LifecycleState[strategyData.lifecycle_state]}
               </span>
             </div>
           </div>
 
-          <div className="p-6 md:p-10">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
-              {/* LEFT: THE 5 REQUIRED PARAMETERS [Master Spec Requirements] */}
-              <div className="space-y-8">
-                {/* 1. Target Memecoin */}
+          <div className="p-4 md:p-10">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+              {/* PARAMETERS GRID */}
+              <div className="space-y-6">
                 <div>
-                  <p className="text-[#b87209] uppercase text-[10px] font-black tracking-widest mb-1 italic">
+                  <p className="text-[#b87209] uppercase text-[8px] md:text-[10px] font-black tracking-widest mb-0.5 italic">
                     Target Memecoin
                   </p>
-                  <p className="text-4xl md:text-6xl font-black italic tracking-tighter text-white">
+                  <p className="text-3xl md:text-6xl font-black italic tracking-tighter text-white">
                     ${strategyData.token_ticker}
                   </p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-6 border-t border-white/5 pt-6">
-                  {/* 2. DCA Amount */}
+                <div className="grid grid-cols-2 gap-4 border-t border-white/5 pt-4">
                   <div>
-                    <p className="text-gray-600 uppercase text-[9px] font-black italic">
+                    <p className="text-gray-600 uppercase text-[7px] md:text-[9px] font-black italic">
                       DCA Amount
                     </p>
-                    <p className="text-xl font-bold italic text-white">
-                      {strategyData.dca_amount} ETH per cycle
+                    <p className="text-sm md:text-xl font-bold italic text-white">
+                      {strategyData.dca_amount} ETH
                     </p>
                   </div>
-                  {/* 3. Frequency */}
                   <div>
-                    <p className="text-gray-600 uppercase text-[9px] font-black italic">
+                    <p className="text-gray-600 uppercase text-[7px] md:text-[9px] font-black italic">
                       Frequency
                     </p>
-                    <p className="text-xl font-bold italic text-[#b87209]">
-                      Every {strategyData.frequency_hours} hours
+                    <p className="text-sm md:text-xl font-bold italic text-[#b87209]">
+                      Every {strategyData.frequency_hours}H
                     </p>
                   </div>
-                  {/* 4. Profit Target */}
                   <div>
-                    <p className="text-gray-600 uppercase text-[9px] font-black italic">
+                    <p className="text-gray-600 uppercase text-[7px] md:text-[9px] font-black italic">
                       Profit Target
                     </p>
-                    <p className="text-xl font-bold italic text-white">
-                      Sell automatically at {strategyData.profit_target}%
+                    <p className="text-sm md:text-xl font-bold italic text-white">
+                      {strategyData.profit_target}%
                     </p>
                   </div>
-                  {/* 5. Sell Options */}
                   <div>
-                    <p className="text-gray-600 uppercase text-[9px] font-black italic">
+                    <p className="text-gray-600 uppercase text-[7px] md:text-[9px] font-black italic">
                       Sell Options
                     </p>
-                    <p className="text-xl font-bold italic text-[#b87209]">
-                      {(strategyData.profit_target / 100).toFixed(0)}X (1X to
-                      12X)
+                    <p className="text-sm md:text-xl font-bold italic text-[#b87209]">
+                      {(strategyData.profit_target / 100).toFixed(0)}X Max
                     </p>
                   </div>
                 </div>
 
-                {/* Stall Monitor: Master Spec 5.2 */}
-                <div className="pt-4 border-t border-white/5">
-                  <div className="flex justify-between items-end mb-2">
-                    <p className="text-red-900 uppercase text-[9px] font-black italic tracking-widest">
-                      Safety: Stall Count
+                {/* Stall Monitor */}
+                <div className="pt-2">
+                  <div className="flex justify-between items-end mb-1">
+                    <p className="text-red-900 uppercase text-[7px] md:text-[9px] font-black italic">
+                      Stall Count
                     </p>
-                    <p className="text-xs font-bold text-red-600 italic">
+                    <p className="text-[9px] font-bold text-red-600 italic">
                       {strategyData.stall_count}/3
                     </p>
                   </div>
-                  <div className="w-full bg-zinc-900 h-1.5 rounded-full overflow-hidden">
+                  <div className="w-full bg-zinc-900 h-1 rounded-full overflow-hidden">
                     <div
                       className="bg-red-600 h-full transition-all duration-1000"
                       style={{
@@ -165,22 +157,22 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              {/* RIGHT: THE ACTION BUTTON */}
-              <div className="flex flex-col items-center justify-center border-l border-white/5 pl-0 lg:pl-12 pt-8 lg:pt-0">
+              {/* ACTION BUTTON - Sized for mobile touch */}
+              <div className="flex flex-col items-center justify-center pt-4 lg:pt-0 lg:border-l lg:border-white/5 lg:pl-12">
                 <button
                   onClick={handleExecute}
                   disabled={isExecuting}
-                  className={`group relative w-full aspect-square md:w-64 flex flex-col items-center justify-center border-4 transition-all duration-300 ${
+                  className={`w-full max-w-[280px] aspect-[3/1] lg:aspect-square flex flex-col items-center justify-center border-2 md:border-4 transition-all ${
                     isExecuting
                       ? "border-zinc-800 bg-zinc-900 text-zinc-600"
-                      : "border-[#b87209] bg-transparent hover:bg-[#b87209] text-[#b87209] hover:text-black"
+                      : "border-[#b87209] bg-transparent hover:bg-[#b87209] text-[#b87209] hover:text-black active:scale-95"
                   }`}
                 >
-                  <span className="text-[10px] font-black uppercase tracking-[0.3em] mb-2 italic">
+                  <span className="text-[7px] md:text-[10px] font-black uppercase tracking-widest mb-1 italic">
                     Manual Override
                   </span>
-                  <span className="text-2xl font-black uppercase italic tracking-tighter">
-                    {isExecuting ? "Processing" : "Start Trade Cycle"}
+                  <span className="text-lg md:text-2xl font-black uppercase italic tracking-tighter">
+                    {isExecuting ? "Processing..." : "Start Trade"}
                   </span>
                 </button>
               </div>
@@ -188,35 +180,33 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* FOUNDER'S CUT & MANDATORY DISCLAIMERS [Spec 13.0] */}
-        <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="md:col-span-2 bg-[#080808] border border-white/5 p-8 flex flex-col justify-center">
-            <h3 className="text-[#b87209] uppercase font-black tracking-widest text-lg italic mb-2">
-              Founder's Cut: Production Crew
+        {/* FOUNDER'S CUT & DISCLAIMERS */}
+        <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="md:col-span-2 bg-[#080808] border border-white/5 p-5">
+            <h3 className="text-[#b87209] uppercase font-black tracking-widest text-sm italic mb-1">
+              Founder's Cut
             </h3>
-            <p className="text-gray-500 text-[10px] uppercase italic font-bold mb-6 tracking-tight leading-relaxed">
-              Share link to earn 1% royalties. <br />
-              <span className="text-white underline underline-offset-4">
-                Referral rewards require at least one profitable trade and one
-                active strategy.
+            <p className="text-gray-500 text-[8px] md:text-[10px] uppercase italic font-bold mb-4 leading-tight">
+              Earn 1% royalties.{" "}
+              <span className="text-white underline underline-offset-2 italic">
+                Requires profitable trade & active strategy [Spec 13.0].
               </span>
             </p>
             <div className="flex border border-[#b87209]/30">
-              <div className="flex-grow bg-black p-4 font-mono text-[10px] text-[#b87209] truncate italic">
+              <div className="flex-grow bg-black p-3 font-mono text-[9px] text-[#b87209] truncate italic">
                 {referralLink}
               </div>
               <button
                 onClick={handleCopy}
-                className="bg-[#b87209] text-black px-6 font-black uppercase text-[10px] italic active:scale-95"
+                className="bg-[#b87209] text-black px-4 font-black uppercase text-[9px] italic"
               >
-                {copied ? "COPIED" : "COPY"}
+                {copied ? "OK" : "COPY"}
               </button>
             </div>
           </div>
 
-          {/* MANDATORY TEXT [Spec 13.0] */}
-          <div className="bg-[#b87209]/5 border border-[#b87209]/20 p-6 flex flex-col justify-center text-center">
-            <p className="text-[10px] text-[#b87209] font-black uppercase italic leading-loose tracking-widest">
+          <div className="bg-[#b87209]/5 border border-[#b87209]/20 p-4 flex flex-col justify-center text-center">
+            <p className="text-[8px] md:text-[10px] text-[#b87209] font-black uppercase italic leading-tight tracking-widest">
               3% fee applies ONLY to profits.
               <br />
               No fees on principal or losses.
@@ -224,8 +214,8 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <footer className="mt-20 opacity-20 text-[9px] uppercase tracking-[0.5em] text-center italic font-black">
-          © 2026 NollyWin Productions • Base Mainnet • Non-Custodial [Spec 8.3]
+        <footer className="mt-12 opacity-20 text-[7px] md:text-[9px] uppercase tracking-[0.3em] text-center italic font-black">
+          © 2026 NollyWin Productions • Base • Non-Custodial
         </footer>
       </div>
     </div>
