@@ -12,12 +12,13 @@ import {
 
 const inter = Inter({ subsets: ["latin"] });
 
-// --- VERCEL BUILD FIX: Safe Initialization ---
+// --- VERCEL BUILD FIX: Strict Safe Initialization ---
+// We check for 'http' to ensure it's a valid URL string before initializing
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 
 const supabase =
-  supabaseUrl && supabaseAnonKey
+  supabaseUrl.startsWith("http") && supabaseAnonKey
     ? createClient(supabaseUrl, supabaseAnonKey)
     : null;
 
@@ -30,8 +31,9 @@ export default function ArchivePage() {
     if (supabase) {
       fetchLiveArchive();
     } else {
+      // If supabase is null (e.g. during Vercel build), we stop loading and show empty state
       setLoading(false);
-      console.warn("Supabase keys missing. Archive is in standby mode.");
+      console.warn("Supabase configuration missing or invalid.");
     }
   }, []);
 
@@ -40,6 +42,7 @@ export default function ArchivePage() {
       setLoading(true);
       if (!supabase) return;
 
+      // 10.2 Database Integration
       const { data, error } = await supabase
         .from("strategies")
         .select("*")
@@ -48,13 +51,15 @@ export default function ArchivePage() {
 
       if (error) throw error;
 
+      // 2.1 Core Financial Logic Integration
       const categorized = (data || []).map((trade: any) => {
-        // Spec 2.1: Profit Calculation
         const profit = trade.final_sell_eth - trade.total_cost_basis_eth;
+
         let type = "CANCELLED";
         if (trade.lifecycle_state === "COMPLETED") {
           type = profit > 0 ? "PROFIT" : "LOSS";
         }
+
         return { ...trade, profit, type };
       });
 
@@ -71,13 +76,14 @@ export default function ArchivePage() {
   );
 
   const handleShare = (trade: any) => {
+    // 15.0 Social Proofing logic
     const text =
       trade.type === "PROFIT"
         ? `🎬 Production wrap! $${trade.token_ticker} profit: ${(
             (trade.profit / trade.total_cost_basis_eth) *
             100
-          ).toFixed(2)}%. Non-custodial via @NollyWin.`
-        : `🎬 Production Log: $${trade.token_ticker} script closed on Base Mainnet. @NollyWin.`;
+          ).toFixed(2)}%. Onchain via @NollyWin.`
+        : `🎬 Production Log: Closed $${trade.token_ticker} script on Base. @NollyWin.`;
 
     window.open(
       `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`,
@@ -90,17 +96,17 @@ export default function ArchivePage() {
       className={`${inter.className} min-h-screen bg-black text-white antialiased`}
     >
       <div className="relative z-30 max-w-5xl mx-auto px-5 pt-32 pb-20">
-        {/* Header */}
+        {/* Cinematic Header */}
         <div className="border-l-4 border-[#b87209] pl-6 mb-12 italic">
           <h1 className="text-3xl md:text-6xl font-black uppercase tracking-tighter text-white leading-none">
             Production <span className="text-[#b87209]">Archive</span>
           </h1>
           <p className="text-gray-500 uppercase tracking-[0.3em] text-[10px] md:text-xs mt-2 font-bold italic">
-            Historical Records / Script Performance Logs
+            Historical Records / Performance Logs
           </p>
         </div>
 
-        {/* Category Tabs */}
+        {/* 10.2 Categorization Tabs */}
         <div className="flex gap-2 md:gap-4 mb-8 overflow-x-auto pb-2 no-scrollbar">
           {["ALL", "PROFIT", "LOSS", "CANCELLED"].map((cat) => (
             <button
@@ -121,7 +127,7 @@ export default function ArchivePage() {
           <div className="flex flex-col items-center py-20 gap-4">
             <Loader2 className="animate-spin text-[#b87209]" size={40} />
             <p className="text-[10px] font-black uppercase italic tracking-widest text-[#b87209]">
-              Syncing Logs...
+              Syncing Productions...
             </p>
           </div>
         ) : (
@@ -129,7 +135,7 @@ export default function ArchivePage() {
             {filteredTrades.map((trade) => (
               <div
                 key={trade.id}
-                className="bg-[#080808] border border-white/5 p-6 flex flex-col md:flex-row justify-between items-center gap-6 group hover:border-[#b87209]/30 transition-all"
+                className="bg-[#080808] border border-white/5 p-6 flex flex-col md:flex-row justify-between items-center gap-6 group hover:border-[#b87209]/30 transition-all shadow-2xl"
               >
                 <div className="flex items-center gap-6 w-full md:w-auto">
                   <div
@@ -192,14 +198,14 @@ export default function ArchivePage() {
             {filteredTrades.length === 0 && (
               <div className="py-20 text-center border border-dashed border-white/10 italic">
                 <p className="text-gray-600 uppercase font-black text-[10px] tracking-widest">
-                  No historical production logs found.
+                  No Production Logs Found.
                 </p>
               </div>
             )}
           </div>
         )}
 
-        {/* Mandatory Text */}
+        {/* 13.0 Mandatory Disclaimer */}
         <div className="mt-12 opacity-30 text-[9px] text-center italic font-bold uppercase tracking-widest leading-relaxed">
           “3% fee applies ONLY to profits • No fees on principal or losses”
         </div>
