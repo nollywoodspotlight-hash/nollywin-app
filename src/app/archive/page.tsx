@@ -1,54 +1,74 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { createClient } from "@supabase/supabase-js"; // Ensure @supabase/supabase-js is installed
 import { Inter } from "next/font/google";
-import { Share2, TrendingUp, TrendingDown, XCircle } from "lucide-react";
+import {
+  Share2,
+  TrendingUp,
+  TrendingDown,
+  XCircle,
+  Loader2,
+} from "lucide-react";
 
 const inter = Inter({ subsets: ["latin"] });
 
-// 10.2 Strategy Data Mock (Reflecting Supabase Schema)
-const ARCHIVE_MOCK = [
-  {
-    id: 1,
-    ticker: "DEGEN",
-    pnl: 0.045,
-    pnlPercent: 450,
-    status: "COMPLETED",
-    type: "PROFIT",
-    date: "2026-05-09",
-  },
-  {
-    id: 2,
-    ticker: "VIRTUAL",
-    pnl: -0.002,
-    pnlPercent: -12,
-    status: "COMPLETED",
-    type: "LOSS",
-    date: "2026-05-08",
-  },
-  {
-    id: 3,
-    ticker: "AI16Z",
-    pnl: 0,
-    pnlPercent: 0,
-    status: "CANCELLED",
-    type: "CANCELLED",
-    date: "2026-05-07",
-    reason: "3 Stalls",
-  },
-];
+// Initialize Supabase Client
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+);
 
 export default function ArchivePage() {
+  const [trades, setTrades] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("ALL");
 
-  const filteredTrades = ARCHIVE_MOCK.filter(
+  useEffect(() => {
+    fetchLiveArchive();
+  }, []);
+
+  async function fetchLiveArchive() {
+    try {
+      setLoading(true);
+      // Querying the 'strategies' table as defined in Spec 10.2 [cite: 170]
+      const { data, error } = await supabase
+        .from("strategies")
+        .select("*")
+        .in("lifecycle_state", ["COMPLETED", "CANCELLED"]) // Archive focus [cite: 71, 72]
+        .order("id", { ascending: false });
+
+      if (error) throw error;
+
+      // Map and Categorize based on Spec 2.1 [cite: 10]
+      const categorized = (data || []).map((trade: any) => {
+        const profit = trade.final_sell_eth - trade.total_cost_basis_eth;
+        let type = "CANCELLED";
+        if (trade.lifecycle_state === "COMPLETED") {
+          type = profit > 0 ? "PROFIT" : "LOSS";
+        }
+        return { ...trade, profit, type };
+      });
+
+      setTrades(categorized);
+    } catch (err) {
+      console.error("Archive Fetch Error:", err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const filteredTrades = trades.filter(
     (t) => filter === "ALL" || t.type === filter,
   );
 
   const handleShare = (trade: any) => {
     const text =
       trade.type === "PROFIT"
-        ? `🎬 Just wrapped a production on $${trade.ticker} for ${trade.pnlPercent}% profit! Powered by @NollyWin.`
-        : `🎬 Production Log: Closed $${trade.ticker} script. Onchain & Non-custodial via @NollyWin.`;
+        ? `🎬 Production wrap! $${trade.token_ticker} profit: ${(
+            (trade.profit / trade.total_cost_basis_eth) *
+            100
+          ).toFixed(2)}%. Non-custodial via @NollyWin.`
+        : `🎬 Production Log: $${trade.token_ticker} script closed on Base Mainnet. @NollyWin.`;
 
     window.open(
       `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`,
@@ -61,17 +81,17 @@ export default function ArchivePage() {
       className={`${inter.className} min-h-screen bg-black text-white antialiased`}
     >
       <div className="relative z-30 max-w-5xl mx-auto px-5 pt-32 pb-20">
-        {/* Archive Header */}
+        {/* Header */}
         <div className="border-l-4 border-[#b87209] pl-6 mb-12 italic">
           <h1 className="text-3xl md:text-6xl font-black uppercase tracking-tighter text-white leading-none">
             Production <span className="text-[#b87209]">Archive</span>
           </h1>
           <p className="text-gray-500 uppercase tracking-[0.3em] text-[10px] md:text-xs mt-2 font-bold italic">
-            Historical Records / Script Performance Logs
+            Live Database Sync / On-Chain History [cite: 160]
           </p>
         </div>
 
-        {/* 🎬 CATEGORY TABS */}
+        {/* Category Tabs */}
         <div className="flex gap-2 md:gap-4 mb-8 overflow-x-auto pb-2 no-scrollbar">
           {["ALL", "PROFIT", "LOSS", "CANCELLED"].map((cat) => (
             <button
@@ -80,7 +100,7 @@ export default function ArchivePage() {
               className={`px-6 py-2 text-[10px] font-black uppercase italic tracking-widest border transition-all ${
                 filter === cat
                   ? "bg-[#b87209] border-[#b87209] text-black"
-                  : "bg-transparent border-white/10 text-gray-500 hover:border-[#b87209]/50"
+                  : "bg-transparent border-white/10 text-gray-500"
               }`}
             >
               {cat}
@@ -88,99 +108,78 @@ export default function ArchivePage() {
           ))}
         </div>
 
-        {/* TRADES LIST */}
-        <div className="space-y-4">
-          {filteredTrades.map((trade) => (
-            <div
-              key={trade.id}
-              className="bg-[#080808] border border-white/5 hover:border-[#b87209]/40 transition-all p-5 md:p-8 flex flex-col md:flex-row justify-between items-center gap-6 group"
-            >
-              {/* Left: Ticker & Date */}
-              <div className="flex items-center gap-6 w-full md:w-auto">
-                <div
-                  className={`p-4 rounded-sm ${
-                    trade.type === "PROFIT"
-                      ? "bg-green-500/10 text-green-500"
-                      : trade.type === "LOSS"
-                      ? "bg-red-500/10 text-red-500"
-                      : "bg-zinc-800 text-zinc-500"
-                  }`}
-                >
-                  {trade.type === "PROFIT" && <TrendingUp size={24} />}
-                  {trade.type === "LOSS" && <TrendingDown size={24} />}
-                  {trade.type === "CANCELLED" && <XCircle size={24} />}
-                </div>
-                <div>
-                  <h3 className="text-2xl font-black italic tracking-tighter text-white uppercase leading-none">
-                    ${trade.ticker}
-                  </h3>
-                  <p className="text-[9px] text-gray-600 font-bold uppercase tracking-widest mt-1">
-                    {trade.date} • {trade.status}
-                  </p>
-                </div>
-              </div>
-
-              {/* Middle: Performance Stats */}
-              <div className="flex gap-10 w-full md:w-auto border-y md:border-y-0 border-white/5 py-4 md:py-0">
-                <div className="text-center md:text-left">
-                  <p className="text-gray-600 uppercase text-[8px] font-black italic mb-1">
-                    PnL (ETH)
-                  </p>
-                  <p
-                    className={`text-xl font-black italic ${
-                      trade.type === "PROFIT"
-                        ? "text-green-500"
-                        : trade.type === "LOSS"
-                        ? "text-red-500"
-                        : "text-zinc-600"
-                    }`}
-                  >
-                    {trade.pnl > 0 ? "+" : ""}
-                    {trade.pnl}
-                  </p>
-                </div>
-                <div className="text-center md:text-left">
-                  <p className="text-gray-600 uppercase text-[8px] font-black italic mb-1">
-                    Return
-                  </p>
-                  <p
-                    className={`text-xl font-black italic ${
-                      trade.type === "PROFIT"
-                        ? "text-green-500"
-                        : trade.type === "LOSS"
-                        ? "text-red-500"
-                        : "text-zinc-600"
-                    }`}
-                  >
-                    {trade.pnlPercent}%
-                  </p>
-                </div>
-              </div>
-
-              {/* Right: Share Button */}
-              <button
-                onClick={() => handleShare(trade)}
-                className="w-full md:w-auto flex items-center justify-center gap-3 bg-transparent border-2 border-[#b87209] text-[#b87209] hover:bg-[#b87209] hover:text-black px-8 py-4 font-black uppercase italic text-xs transition-all active:scale-95"
+        {loading ? (
+          <div className="flex flex-col items-center py-20 gap-4">
+            <Loader2 className="animate-spin text-[#b87209]" size={40} />
+            <p className="text-[10px] font-black uppercase italic tracking-widest text-[#b87209]">
+              Syncing with Supabase...
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {filteredTrades.map((trade) => (
+              <div
+                key={trade.id}
+                className="bg-[#080808] border border-white/5 p-6 flex flex-col md:flex-row justify-between items-center gap-6"
               >
-                <Share2 size={16} />
-                Share Script
-              </button>
-            </div>
-          ))}
+                <div className="flex items-center gap-6 w-full md:w-auto">
+                  <div
+                    className={`p-4 ${
+                      trade.type === "PROFIT"
+                        ? "text-green-500"
+                        : trade.type === "LOSS"
+                        ? "text-red-500"
+                        : "text-zinc-600"
+                    }`}
+                  >
+                    {trade.type === "PROFIT" ? (
+                      <TrendingUp size={24} />
+                    ) : trade.type === "LOSS" ? (
+                      <TrendingDown size={24} />
+                    ) : (
+                      <XCircle size={24} />
+                    )}
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-black italic tracking-tighter uppercase leading-none">
+                      ${trade.token_ticker}
+                    </h3>
+                    <p className="text-[9px] text-gray-600 font-bold uppercase tracking-widest mt-1">
+                      Script ID: {trade.id} • {trade.lifecycle_state}
+                    </p>
+                  </div>
+                </div>
 
-          {filteredTrades.length === 0 && (
-            <div className="py-20 text-center border border-dashed border-white/10 italic">
-              <p className="text-gray-600 uppercase font-black text-sm tracking-widest">
-                No matching script logs found.
-              </p>
-            </div>
-          )}
-        </div>
+                <div className="flex gap-10 w-full md:w-auto border-y md:border-y-0 border-white/5 py-4">
+                  <div className="text-center">
+                    <p className="text-gray-600 uppercase text-[8px] font-black italic">
+                      Net PnL (ETH)
+                    </p>
+                    <p
+                      className={`text-xl font-black italic ${
+                        trade.profit > 0 ? "text-green-500" : "text-red-500"
+                      }`}
+                    >
+                      {(trade.profit || 0).toFixed(4)}
+                    </p>
+                  </div>
+                </div>
 
-        {/* 13.0 Mandatory Disclaimer */}
+                <button
+                  onClick={() => handleShare(trade)}
+                  className="w-full md:w-auto border-2 border-[#b87209] text-[#b87209] px-8 py-4 font-black uppercase italic text-xs active:scale-95"
+                >
+                  Share Trade
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Mandatory Text [cite: 200, 201] */}
         <div className="mt-12 opacity-30 text-[9px] text-center italic font-bold uppercase tracking-widest">
-          3% profit-only fee applied to all historical gains. No fees on
-          principal.
+          “3% fee applies ONLY to profits • No fees on principal or losses”
+          [cite: 200, 201]
         </div>
       </div>
     </div>
