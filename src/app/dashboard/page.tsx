@@ -7,7 +7,7 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const dynamic = "force-dynamic";
 
-// 5.1 ENUM Mapping with TypeScript Type Safety
+// 5.1 ENUM Mapping (Technical logic stays under the hood)
 const LifecycleState: Record<number, string> = {
   0: "ACTIVE",
   1: "PAUSED",
@@ -20,15 +20,14 @@ export default function DashboardPage() {
   const { address } = useAccount();
   const [copied, setCopied] = useState(false);
 
-  // 6.2 Processing Logic Data (Placeholder for Supabase Sync)
+  // Strategy Data
   const strategyData = {
     token_ticker: "DEGEN",
     dca_amount: "0.01",
     frequency_hours: 4,
-    profit_target: 200, // 2X target
+    profit_target: 200,
     lifecycle_state: 0 as number,
     stall_count: 1,
-    last_execution_error: null as string | null,
   };
 
   const referralLink = address
@@ -48,20 +47,16 @@ export default function DashboardPage() {
     <div
       className={`${inter.className} min-h-screen bg-black text-white antialiased selection:bg-[#b87209] selection:text-black`}
     >
-      {/* Main Container: 
-          - relative z-10 ensures it sits above any global background effects 
-          - pt-32 ensures clearance from the fixed Header
-      */}
       <div className="relative z-10 max-w-6xl mx-auto px-5 pt-32 pb-16">
-        {/* Header Section - Cinematic Noir */}
+        {/* Header - Clean Cinematic Look */}
         <div className="border-b border-[#b87209]/20 pb-5 mb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-3">
           <div className="italic">
             <h1 className="text-2xl md:text-5xl font-black uppercase tracking-tight text-[#b87209] leading-none">
               Production Dashboard
             </h1>
             <p className="text-gray-500 uppercase tracking-[0.15em] text-[9px] md:text-xs mt-1 font-bold">
-              Base Mainnet / Execution Interval: 130s ± 60s /{" "}
-              {LifecycleState[strategyData.lifecycle_state]}
+              Base Mainnet / Production ID:{" "}
+              {address ? address.slice(0, 8) : "0x000"}...
             </p>
           </div>
           <div
@@ -84,7 +79,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Founder's Cut - Referral Logic (Your 1% Lifetime Royalties) */}
+        {/* Founder's Cut Section */}
         <div className="mb-8 bg-[#080808] border border-[#b87209]/30 p-5 md:p-8 rounded-sm relative overflow-hidden group">
           <div className="relative z-20">
             <h3 className="text-[#b87209] uppercase font-black tracking-widest text-base md:text-xl mb-1 italic">
@@ -95,7 +90,7 @@ export default function DashboardPage() {
               <span className="text-white font-black">
                 1% Lifetime Royalties
               </span>{" "}
-              on every trade from your script's crew.
+              on every trade from your crew.
             </p>
 
             <div className="flex flex-col gap-2">
@@ -110,16 +105,16 @@ export default function DashboardPage() {
               </button>
             </div>
           </div>
-          <div className="absolute -right-4 -bottom-10 text-[120px] font-black text-[#b87209]/5 pointer-events-none italic select-none">
+          <div className="absolute -right-4 -bottom-10 text-[120px] font-black text-[#b87209]/5 pointer-events-none italic select-none font-sans">
             NW
           </div>
         </div>
 
-        {/* Strategy Parameters Grid (Target, Amount, Frequency, Profit) */}
+        {/* Strategy Parameters Grid */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
           {[
             {
-              label: "Target Memecoin",
+              label: "Ticker",
               val: strategyData.token_ticker,
               highlight: true,
             },
@@ -145,57 +140,25 @@ export default function DashboardPage() {
           ))}
         </div>
 
-        {/* 6.3 Stall Monitor & Execution Logs */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-8">
-          <div className="bg-[#080808] border-l-4 border-red-600 p-5">
-            <h4 className="text-red-600 uppercase font-black text-[10px] italic mb-3 tracking-widest">
-              Safety Monitor: Stall Counter
-            </h4>
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-gray-400 text-[9px] uppercase font-bold italic">
-                Insufficient ETH (Max 3)
-              </span>
-              <span className="text-xl font-black">
-                {strategyData.stall_count} / 3
-              </span>
-            </div>
-            <div className="w-full bg-white/5 h-1">
-              <div
-                className="bg-red-600 h-1 transition-all duration-700"
-                style={{ width: `${(strategyData.stall_count / 3) * 100}%` }}
-              ></div>
-            </div>
-            <p className="text-[8px] text-gray-600 mt-2 uppercase italic tracking-tighter">
-              Status:{" "}
-              {strategyData.stall_count >= 3 ? "CANCELLED" : "MONITORING"}
-            </p>
+        {/* Stall Monitor (Keep this so they know why it might stop) */}
+        <div className="max-w-md bg-[#080808] border-l-4 border-red-600 p-5 mb-8">
+          <h4 className="text-red-600 uppercase font-black text-[10px] italic mb-3 tracking-widest">
+            Stall Counter
+          </h4>
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-gray-400 text-[9px] uppercase font-bold italic">
+              Insufficient ETH (Max 3)
+            </span>
+            <span className="text-xl font-black">
+              {strategyData.stall_count} / 3
+            </span>
           </div>
-
-          <div className="bg-[#080808] border-l-4 border-[#b87209] p-5">
-            <h4 className="text-[#b87209] uppercase font-black text-[10px] italic mb-3 tracking-widest">
-              Execution Feed
-            </h4>
-            <p className="text-white/80 font-mono text-[9px] uppercase leading-relaxed">
-              {strategyData.last_execution_error
-                ? `[!] FAILURE: ${strategyData.last_execution_error}`
-                : `[OK] Logic: 7.3 Settlement Order Active (Profit > Fee > Refund).`}
-            </p>
-            <p className="text-[8px] text-gray-700 mt-2 uppercase italic font-bold">
-              RPC Latency: Stable • Security: 8.2 No-Custody Mode Active
-            </p>
+          <div className="w-full bg-white/5 h-1">
+            <div
+              className="bg-red-600 h-1 transition-all duration-700"
+              style={{ width: `${(strategyData.stall_count / 3) * 100}%` }}
+            ></div>
           </div>
-        </div>
-
-        {/* 8.3 Security Constraints Summary */}
-        <div className="bg-[#b87209]/5 border border-[#b87209]/20 p-4 mb-8">
-          <p className="text-[9px] md:text-xs text-gray-500 italic leading-relaxed">
-            <strong className="text-[#b87209] uppercase tracking-widest mr-2">
-              Security:
-            </strong>
-            Transparent Upgradeable Proxy (UUPS). Reentrancy and Slippage
-            protection required. All funds MUST be returned to user wallet
-            within the same transaction window. No long-term custody allowed.
-          </p>
         </div>
 
         {/* Footer */}
