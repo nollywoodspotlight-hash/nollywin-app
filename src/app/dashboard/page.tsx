@@ -1,6 +1,8 @@
 "use client";
+
 import React, { useState } from "react";
-import { useAccount } from "wagmi";
+import { useAccount, useSendTransaction } from "wagmi";
+import { parseEther } from "viem";
 import { Inter } from "next/font/google";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -10,6 +12,9 @@ export default function DashboardPage() {
   const { address } = useAccount();
   const [isTradeActive, setIsTradeActive] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  // NEW: Hook to trigger wallet authorization
+  const { sendTransaction } = useSendTransaction();
 
   // INTERACTIVE CONFIGURATION [Master Spec 2.0]
   const [contractAddress, setContractAddress] = useState("");
@@ -22,14 +27,34 @@ export default function DashboardPage() {
     ? `https://nollywin.com/join?ref=${address}`
     : "Connect Wallet";
 
-  const handleTradeAction = (e: React.MouseEvent) => {
+  // UPDATED: Logic 7.1 with Wallet Authorization
+  const handleTradeAction = async (e: React.MouseEvent) => {
     e.preventDefault();
-    if (!isTradeActive && contractAddress.length < 42) {
-      alert("Invalid Base Contract Address");
-      return;
+
+    // If turning ON the bot
+    if (!isTradeActive) {
+      if (contractAddress.length < 42) {
+        alert("Invalid Base Contract Address");
+        return;
+      }
+
+      try {
+        // TRIGGER WALLET NOTIFICATION
+        // NOTE: Replace '0x0000...' with the actual NollyWin Vault address
+        sendTransaction({
+          to: "0x0000000000000000000000000000000000000000" as `0x${string}`,
+          value: parseEther(dcaAmount),
+        });
+
+        setIsTradeActive(true);
+      } catch (error) {
+        console.error("Wallet denied or failed:", error);
+        alert("Transaction failed or was rejected.");
+      }
+    } else {
+      // Manual Override / Abort logic
+      setIsTradeActive(false);
     }
-    // Logic 7.1: Start/Abort production cycle
-    setIsTradeActive(!isTradeActive);
   };
 
   const handleCopy = () => {
@@ -124,7 +149,7 @@ export default function DashboardPage() {
                     </select>
                   </div>
 
-                  {/* 4. Sell Options [Master Spec 2.0] */}
+                  {/* 4. Sell Options */}
                   <div>
                     <label className="text-gray-600 uppercase text-[7px] md:text-[9px] font-black italic block mb-1">
                       Sell Option
@@ -144,7 +169,7 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
-                {/* 5.2 Stall Monitor [Master Spec 82-91] */}
+                {/* 5.2 Stall Monitor */}
                 <div className="pt-2">
                   <div className="flex justify-between items-end mb-1 text-[7px] md:text-[9px]">
                     <p className="text-red-900 uppercase font-black italic">
@@ -184,7 +209,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* FOUNDER'S CUT & MANDATORY DISCLAIMERS [Spec 13.0] */}
+        {/* FOOTER & REFERRALS */}
         <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="md:col-span-2 bg-[#080808] border border-white/5 p-5 md:p-8">
             <h3 className="text-[#b87209] uppercase font-black tracking-widest text-xs italic mb-2 underline decoration-white/10 underline-offset-8">
@@ -218,9 +243,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <footer className="mt-16 opacity-20 text-[8px] uppercase tracking-[0.4em] text-center italic font-black">
-          © 2026 NollyWin Productions • Onchain Non-Custodial [Spec 8.3]
-        </footer>
+        <footer className="mt-16 opacity-20 text-[8px] uppercase tracking-[0.4em] text-center italic font-black"></footer>
       </div>
     </div>
   );
