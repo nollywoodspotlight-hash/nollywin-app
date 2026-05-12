@@ -41,14 +41,14 @@ export default function Header() {
           }}
         >
           <div className="flex items-baseline space-x-1">
-            <span className="font-black italic text-2xl text-white uppercase tracking-tighter transition-colors group-hover:text-[#b87209]">
+            <span className="font-black italic text-1xl text-white uppercase tracking-tighter transition-colors group-hover:text-[#b87209]">
               NW
             </span>
-            <span className="font-black italic text-2xl text-[#b87209] uppercase tracking-tighter group-hover:text-white">
+            <span className="font-black italic text-1xl text-[#b87209] uppercase tracking-tighter group-hover:text-white">
               Nollywin
             </span>
           </div>
-          <span className="text-[8px] font-black uppercase tracking-[0.2em] text-white/50 italic">
+          <span className="text-[7px] font-black uppercase tracking-[0.2em] text-white/50 italic">
             by Nollywood spotlight
           </span>
         </div>
