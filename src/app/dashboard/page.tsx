@@ -1,7 +1,13 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { useAccount, useSendTransaction, useDisconnect } from "wagmi";
+import {
+  useAccount,
+  useSendTransaction,
+  useDisconnect,
+  useSwitchChain,
+} from "wagmi";
+import { base } from "wagmi/chains";
 import { parseEther } from "viem";
 import { Inter } from "next/font/google";
 import { useRouter } from "next/navigation";
@@ -11,13 +17,15 @@ const inter = Inter({ subsets: ["latin"] });
 export const dynamic = "force-dynamic";
 
 export default function DashboardPage() {
-  const { address, isConnected } = useAccount();
+  const { address, isConnected, chain } = useAccount();
   const { disconnect } = useDisconnect();
+  const { switchChain } = useSwitchChain();
   const router = useRouter();
 
-  // Trade Feed & Selection States
+  // Dashboard Data States
   const [trades, setTrades] = useState<any[]>([]);
   const [selectedTrade, setSelectedTrade] = useState<any>(null);
+  const [referralCount, setReferralCount] = useState(0);
   const [isTradeActive, setIsTradeActive] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -33,12 +41,16 @@ export default function DashboardPage() {
   const [sellMultiplier, setSellMultiplier] = useState("2");
   const [stallCount] = useState(0);
 
-  // 1. SECURITY GUARD: Immediate Redirect on Disconnect
+  // 1. NETWORK & SECURITY GUARD
   useEffect(() => {
     if (!isConnected) {
       router.push("/");
     }
-  }, [isConnected, router]);
+    // Force switch to Base if on wrong network
+    if (isConnected && chain?.id !== base.id) {
+      switchChain({ chainId: base.id });
+    }
+  }, [isConnected, chain, router, switchChain]);
 
   const supabase = useMemo(() => {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -47,27 +59,36 @@ export default function DashboardPage() {
     return createClient(url, key);
   }, []);
 
-  // 2. DATA SYNC: Fetch Status and Live Feed
+  // 2. DATA SYNC: Fetch Status, Live Feed, and Referral Headcount
   useEffect(() => {
     async function syncDashboard() {
       if (!address || !supabase) return;
 
       try {
-        const { data, error } = await supabase
+        // Fetch All Trades
+        const { data: tradeData } = await supabase
           .from("strategies")
           .select("*")
           .eq("wallet_address", address)
           .order("created_at", { ascending: false });
 
-        if (data) {
-          setTrades(data);
-          const active = data.some((s) => s.lifecycle_state === "ACTIVE");
-          const profit = data.some((s) => (s.profit_eth || 0) > 0);
+        // Fetch Production Crew (Referrals)
+        const { count: crewCount } = await supabase
+          .from("users")
+          .select("*", { count: "exact", head: true })
+          .eq("referred_by", address);
+
+        if (tradeData) {
+          setTrades(tradeData);
+          const active = tradeData.some((s) => s.lifecycle_state === "ACTIVE");
+          const profit = tradeData.some((s) => (s.profit_eth || 0) > 0);
 
           setIsCurrentlyActive(active);
           setHasRealizedProfit(profit);
           if (active) setIsTradeActive(true);
         }
+
+        if (crewCount !== null) setReferralCount(crewCount);
       } catch (err) {
         console.error("Dashboard sync error:", err);
       }
@@ -80,7 +101,6 @@ export default function DashboardPage() {
     ? `https://nollywin.xyz/join?ref=${address}`
     : "Connect Wallet";
 
-  // 3. ABORT ENGINE: Sell back to Eth and Archive
   const handleAbortTrade = async (trade: any) => {
     const confirmAbort = window.confirm(
       "CRITICAL: Abort production and liquidate to ETH immediately?",
@@ -96,7 +116,7 @@ export default function DashboardPage() {
 
       if (response.ok) {
         setSelectedTrade(null);
-        window.location.reload(); // Refresh to sync Archive and Dashboard
+        window.location.reload();
       }
     } catch (error) {
       alert("Abort failed. System remains online.");
@@ -147,7 +167,6 @@ export default function DashboardPage() {
     }
   };
 
-  // 4. ACCESS DENIED OVERLAY
   if (!isConnected) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
@@ -189,7 +208,7 @@ export default function DashboardPage() {
       <div className="fixed inset-0 bg-[radial-gradient(circle_at_50%_10%,rgba(184,114,9,0.12),transparent_60%)] pointer-events-none" />
 
       <div className="relative z-50 max-w-5xl mx-auto px-4 pt-12 pb-12 pointer-events-auto">
-        <div className="border-l-2 border-[#b87209] pl-4 mb-6 italic">
+        <div className="border-l-2 border-[#b87209] pl-4 mb-6 italic text-left">
           <h1 className="text-xl md:text-5xl font-black uppercase tracking-tighter text-white leading-none">
             Production <span className="text-[#b87209]">Dashboard</span>
           </h1>
@@ -218,7 +237,7 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
               <div className="space-y-6">
                 <div>
-                  <label className="text-[#b87209] uppercase text-[8px] md:text-[10px] font-black tracking-widest mb-1 block italic">
+                  <label className="text-[#b87209] uppercase text-[8px] md:text-[10px] font-black tracking-widest mb-1 block italic text-left">
                     Target Contract ID (CA)
                   </label>
                   <input
@@ -232,7 +251,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-white/5 pt-4">
                   <div>
-                    <label className="text-gray-600 uppercase text-[7px] md:text-[9px] font-black italic block mb-1">
+                    <label className="text-gray-600 uppercase text-[7px] md:text-[9px] font-black italic block mb-1 text-left">
                       DCA Size (ETH)
                     </label>
                     <input
@@ -245,7 +264,7 @@ export default function DashboardPage() {
                     />
                   </div>
                   <div>
-                    <label className="text-gray-600 uppercase text-[7px] md:text-[9px] font-black italic block mb-1">
+                    <label className="text-gray-600 uppercase text-[7px] md:text-[9px] font-black italic block mb-1 text-left">
                       Frequency
                     </label>
                     <select
@@ -260,7 +279,7 @@ export default function DashboardPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="text-gray-600 uppercase text-[7px] md:text-[9px] font-black italic block mb-1">
+                    <label className="text-gray-600 uppercase text-[7px] md:text-[9px] font-black italic block mb-1 text-left">
                       Sell Option
                     </label>
                     <select
@@ -297,7 +316,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* 5. LIVE PRODUCTION FEED */}
+        {/* LIVE PRODUCTION FEED */}
         <div className="mt-12 space-y-4">
           <div className="flex items-center gap-4 mb-6">
             <div className="h-[1px] flex-grow bg-gradient-to-r from-transparent via-[#b87209]/40 to-transparent" />
@@ -326,12 +345,12 @@ export default function DashboardPage() {
                         /{trade.id.toString().padStart(3, "0")}
                       </span>
                       <div>
-                        <p className="text-white font-bold uppercase text-[10px] tracking-widest leading-none">
+                        <p className="text-white font-bold uppercase text-[10px] tracking-widest leading-none text-left">
                           Target: {trade.target_contract_address.slice(0, 10)}
                           ...
                         </p>
-                        <p className="text-gray-500 text-[8px] uppercase mt-1 italic font-black">
-                          Investment: {trade.dca_amount_eth} ETH
+                        <p className="text-gray-500 text-[8px] uppercase mt-1 italic font-black text-left font-mono">
+                          Size: {trade.dca_amount_eth} ETH
                         </p>
                       </div>
                     </div>
@@ -344,11 +363,11 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* 6. MISSION BRIEFING MODAL */}
+        {/* MISSION BRIEFING MODAL */}
         {selectedTrade && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm">
             <div className="w-full max-w-xl bg-[#080808] border-2 border-[#b87209] shadow-[0_0_50px_rgba(184,114,9,0.2)]">
-              <div className="bg-[#b87209] px-6 py-3 flex justify-between items-center">
+              <div className="bg-[#b87209] px-6 py-3 flex justify-between items-center text-left">
                 <h3 className="text-black font-black uppercase italic tracking-tighter text-lg">
                   Mission Briefing: {selectedTrade.id}
                 </h3>
@@ -359,7 +378,7 @@ export default function DashboardPage() {
                   [X]
                 </button>
               </div>
-              <div className="p-8 space-y-8">
+              <div className="p-8 space-y-8 text-left">
                 <div className="grid grid-cols-2 gap-6 border-b border-white/5 pb-8">
                   <div>
                     <p className="text-[#b87209] text-[9px] uppercase font-black italic mb-1">
@@ -391,10 +410,20 @@ export default function DashboardPage() {
 
         {/* FOOTER & REFERRALS */}
         <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="md:col-span-2 bg-[#080808] border border-white/5 p-5 md:p-8">
-            <h3 className="text-[#b87209] uppercase font-black tracking-widest text-xs italic mb-2 underline decoration-white/10 underline-offset-8">
-              Founder&apos;s Cut: Production Crew
-            </h3>
+          <div className="md:col-span-2 bg-[#080808] border border-white/5 p-5 md:p-8 text-left">
+            <div className="flex justify-between items-start mb-4">
+              <h3 className="text-[#b87209] uppercase font-black tracking-widest text-xs italic underline decoration-white/10 underline-offset-8">
+                Founder&apos;s Cut: Production Crew
+              </h3>
+              <div className="text-right">
+                <p className="text-[#b87209] font-black italic text-[10px] uppercase">
+                  Crew Size
+                </p>
+                <p className="text-white font-black text-xl leading-none italic">
+                  {referralCount}
+                </p>
+              </div>
+            </div>
             <div className="flex border border-[#b87209]/40 mt-4">
               <div className="flex-grow bg-black p-4 font-mono text-[8px] text-[#b87209] truncate italic select-all">
                 {referralLink}
