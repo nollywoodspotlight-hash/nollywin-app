@@ -31,14 +31,6 @@ export default function Footer() {
                 </p>
               </div>
             </div>
-            <div className="space-y-2">
-              <h4 className="text-white text-[10px] font-black uppercase tracking-[0.3em]">
-                Protocol
-              </h4>
-              <p className="text-[#b87209] text-[9px] font-bold uppercase tracking-widest">
-                1% Founder Royalties Active
-              </p>
-            </div>
           </div>
 
           {/* Legal/Studio Tag */}
