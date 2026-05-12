@@ -1,25 +1,24 @@
+"use client";
+
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import "@coinbase/onchainkit/styles.css";
 import { Providers } from "./components/providers";
-import Navbar from "./components/NavbarX";
+import Header from "./components/Header"; // UPDATED: Pointing to the new Header logic
 import Footer from "./components/FooterX";
 
 const inter = Inter({ subsets: ["latin"] });
 
-export const metadata: Metadata = {
-  title: "NollyWin | Cinematic DCA on Base",
-  description: "Automated trading with a Nollywood soul. Powered by Base.",
-};
+// Note: Metadata must be in a separate server component if using "use client"
+// or handled via the viewport object below.
 
-// Prevents the browser from zooming in on mobile,
-// keeping the heavy italic typography perfectly framed.
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  themeColor: "#000000",
 };
 
 export default function RootLayout({
@@ -33,17 +32,16 @@ export default function RootLayout({
         className={`${inter.className} bg-black antialiased text-white min-h-screen flex flex-col overflow-x-hidden`}
       >
         <Providers>
-          {/* The internal <Navbar /> is fixed, so we don't need a wrapper 
-              header here. Removing the relative wrapper helps fixed positioning.
+          {/* Replacing <Navbar /> with <Header />. 
+              This ensures the Terminate Session logic and Logo 
+              we built are active globally.
           */}
-          <Navbar />
+          <Header />
 
-          {/* 'pt-20' ensures that on mobile, the content starts AFTER the 80px header.
-              On desktop ('md:pt-0'), we let the Hero section handle its own spacing.
+          {/* pt-20 provides the necessary clearance for our fixed 80px header
+              on all views so content isn't hidden behind the nav bar.
           */}
-          <main className="relative flex-grow w-full pt-20 md:pt-0">
-            {children}
-          </main>
+          <main className="relative flex-grow w-full pt-20">{children}</main>
 
           <Footer />
         </Providers>
