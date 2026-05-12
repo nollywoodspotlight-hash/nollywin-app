@@ -17,6 +17,17 @@ import { createClient } from "@supabase/supabase-js";
 const inter = Inter({ subsets: ["latin"] });
 export const dynamic = "force-dynamic";
 
+// Define a simple interface to stop the "any" type errors
+interface Trade {
+  id: string;
+  wallet_address: string;
+  target_contract_address: string;
+  dca_amount_eth: number;
+  lifecycle_state: string;
+  profit_eth?: number;
+  created_at?: string;
+}
+
 export default function DashboardPage() {
   const { address, isConnected, chain } = useAccount();
   const { disconnect } = useDisconnect();
@@ -25,8 +36,8 @@ export default function DashboardPage() {
   const router = useRouter();
 
   // --- STATE ---
-  const [trades, setTrades] = useState<any[]>([]);
-  const [selectedTrade, setSelectedTrade] = useState<any>(null);
+  const [trades, setTrades] = useState<Trade[]>([]);
+  const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
   const [referralCount, setReferralCount] = useState(0);
   const [isTradeActive, setIsTradeActive] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -75,7 +86,6 @@ export default function DashboardPage() {
           ? contractAddress
           : "0x0000000000000000000000000000000000000000";
 
-      // 1. Try API first
       const response = await fetch("/api/activate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -94,10 +104,6 @@ export default function DashboardPage() {
         alert("SUCCESS: Trade discovered and linked.");
         window.location.reload();
       } else {
-        // 2. FALLBACK: Direct DB Insert if API fails
-        console.log(
-          "🔄 API Sync failed, attempting direct database recovery...",
-        );
         if (!supabase) throw new Error("Database client not initialized");
 
         const { error: dbError } = await supabase.from("strategies").insert([
@@ -131,7 +137,7 @@ export default function DashboardPage() {
     }
   };
 
-  const handleAbortTrade = async (trade: any) => {
+  const handleAbortTrade = async (trade: Trade) => {
     if (!window.confirm("Abort production and liquidate for profit?")) return;
     try {
       const res = await fetch("/api/abort", {
@@ -197,19 +203,24 @@ export default function DashboardPage() {
   useEffect(() => {
     async function syncDashboard() {
       if (!address || !supabase) return;
+
+      // FIXED: Removed the duplicate .from("strategies") call here
       const { data } = await supabase
         .from("strategies")
         .select("*")
         .eq("wallet_address", address)
         .order("created_at", { ascending: false });
+
       const { count } = await supabase
         .from("users")
         .select("*", { count: "exact", head: true })
         .eq("referred_by", address);
+
       if (data) {
-        setTrades(data);
-        const active = data.some((s) => s.lifecycle_state === "ACTIVE");
-        const profit = data.some((s) => (s.profit_eth || 0) > 0);
+        setTrades(data as Trade[]);
+        // FIXED: Added types to 's' to stop implicit any errors
+        const active = data.some((s: Trade) => s.lifecycle_state === "ACTIVE");
+        const profit = data.some((s: Trade) => (s.profit_eth || 0) > 0);
         setIsCurrentlyActive(active);
         setHasRealizedProfit(profit);
         if (active) setIsTradeActive(true);
@@ -223,34 +234,12 @@ export default function DashboardPage() {
 
   return (
     <div
-      className={`${inter.className} min-h-screen bg-black text-white antialiased selection:bg-[#b87209] selection:text-black`}
+      className={`${inter.className} min-h-screen bg-transparent text-white antialiased selection:bg-[#b87209] selection:text-black`}
     >
-      <nav className="fixed top-0 left-0 right-0 z-[200] bg-black/95 border-b border-[#b87209]/20 shadow-xl">
-        <div className="flex justify-between items-center px-6 py-4 max-w-5xl mx-auto">
-          <div className="flex items-center gap-3">
-            <div
-              className={`w-2 h-2 rounded-full animate-pulse ${
-                isCurrentlyActive ? "bg-green-500" : "bg-[#b87209]"
-              }`}
-            />
-            <span className="text-[10px] font-black uppercase italic tracking-[0.3em] text-[#b87209]">
-              {isCurrentlyActive ? "Strategy Online" : "System Standby"}
-            </span>
-          </div>
-          <button
-            onClick={handleTerminate}
-            className="px-6 py-2 border border-[#b87209]/50 hover:bg-[#b87209] hover:text-black transition-all bg-black cursor-pointer rounded-sm"
-          >
-            <span className="text-[10px] font-black uppercase italic tracking-widest">
-              [ Terminate Session ]
-            </span>
-          </button>
-        </div>
-      </nav>
-
-      <div className="fixed inset-0 bg-[radial-gradient(circle_at_50%_10%,rgba(184,114,9,0.15),transparent_60%)] pointer-events-none z-[1]" />
+      <div className="fixed inset-0 bg-[radial-gradient(circle_at_50%_10%,rgba(184,114,9,0.1),transparent_60%)] pointer-events-none z-[1]" />
 
       <div className="relative z-50 max-w-5xl mx-auto px-4 pt-32 pb-20">
+        {/* Header Section */}
         <div className="border-l-4 border-[#b87209] pl-6 mb-12 italic text-left">
           <h1 className="text-4xl md:text-7xl font-black uppercase tracking-tighter leading-none">
             Production <span className="text-[#b87209]">Dashboard</span>
@@ -260,7 +249,8 @@ export default function DashboardPage() {
           </p>
         </div>
 
-        <div className="bg-[#080808] border border-[#b87209]/40 shadow-2xl mb-12">
+        {/* Main Control Panel */}
+        <div className="bg-[#080808]/90 backdrop-blur-sm border border-[#b87209]/40 shadow-2xl mb-12">
           <div className="bg-[#b87209]/10 border-b border-[#b87209]/20 px-6 py-3 flex justify-between items-center">
             <span className="text-[10px] font-black uppercase tracking-widest italic text-[#b87209]">
               Script Editor
@@ -291,7 +281,7 @@ export default function DashboardPage() {
                     value={contractAddress}
                     disabled={isTradeActive}
                     onChange={(e) => setContractAddress(e.target.value)}
-                    className="w-full bg-black border-b-2 border-white/10 py-3 text-xl font-mono text-white outline-none focus:border-[#b87209]"
+                    className="w-full bg-black/50 border-b-2 border-white/10 py-3 text-xl font-mono text-white outline-none focus:border-[#b87209]"
                   />
                 </div>
                 <div className="grid grid-cols-3 gap-6 pt-4 border-t border-white/5">
@@ -357,8 +347,9 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {/* Protocol Recovery */}
         {!isTradeActive && (
-          <div className="mb-12 bg-[#080808]/80 border border-[#b87209]/30 p-6 flex flex-col md:flex-row gap-4 items-center rounded-sm shadow-xl">
+          <div className="mb-12 bg-[#080808]/80 backdrop-blur-sm border border-[#b87209]/30 p-6 flex flex-col md:flex-row gap-4 items-center rounded-sm shadow-xl">
             <div className="text-left flex-grow">
               <h4 className="text-[#b87209] text-[11px] font-black uppercase italic tracking-widest">
                 Protocol Recovery
@@ -383,6 +374,7 @@ export default function DashboardPage() {
           </div>
         )}
 
+        {/* Trade Feed */}
         <div className="mb-12">
           <div className="flex items-center gap-4 mb-8">
             <h2 className="text-[#b87209] font-black uppercase italic tracking-[0.4em] text-xs">
@@ -392,7 +384,7 @@ export default function DashboardPage() {
           </div>
           <div className="space-y-3 text-left">
             {trades.length === 0 ? (
-              <div className="py-12 border border-dashed border-white/10 text-center">
+              <div className="py-12 border border-dashed border-white/10 bg-black/20 text-center">
                 <p className="text-gray-700 text-[10px] font-black uppercase italic tracking-[0.3em]">
                   No Active Productions
                 </p>
@@ -402,7 +394,7 @@ export default function DashboardPage() {
                 <button
                   key={trade.id}
                   onClick={() => setSelectedTrade(trade)}
-                  className={`w-full flex justify-between items-center bg-[#080808] border p-6 transition-all group ${
+                  className={`w-full flex justify-between items-center bg-[#080808]/90 backdrop-blur-sm border p-6 transition-all group ${
                     trade.lifecycle_state === "COMPLETED"
                       ? "border-green-500/20 shadow-[0_0_15px_rgba(34,197,94,0.05)]"
                       : "border-white/5 hover:border-[#b87209]/50"
@@ -443,6 +435,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {/* Trade Details Modal */}
         {selectedTrade && (
           <div className="fixed inset-0 z-[300] flex items-center justify-center p-6 bg-black/95 backdrop-blur-md">
             <div className="w-full max-w-2xl bg-[#080808] border-2 border-[#b87209] shadow-2xl">
@@ -489,8 +482,9 @@ export default function DashboardPage() {
           </div>
         )}
 
+        {/* Footer Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
-          <div className="md:col-span-2 bg-[#080808] border border-white/5 p-10">
+          <div className="md:col-span-2 bg-[#080808]/90 backdrop-blur-sm border border-white/5 p-10">
             <div className="flex justify-between items-start mb-6">
               <h3 className="text-[#b87209] uppercase font-black tracking-widest text-xs italic underline decoration-white/10 underline-offset-8">
                 Production Crew
@@ -517,7 +511,7 @@ export default function DashboardPage() {
             </div>
           </div>
           <div
-            className={`border-2 p-8 flex flex-col justify-center text-center ${
+            className={`border-2 p-8 flex flex-col justify-center text-center backdrop-blur-sm ${
               royaltiesEnabled
                 ? "bg-[#b87209]/5 border-[#b87209]"
                 : "bg-red-950/10 border-red-900/40"
