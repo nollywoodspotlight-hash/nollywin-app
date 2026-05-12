@@ -1,19 +1,13 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useAccount, useSendTransaction, useDisconnect } from "wagmi";
 import { parseEther } from "viem";
 import { Inter } from "next/font/google";
-import { createClient } from "@supabase/supabase-js"; // Ensure this is installed
+import { createClient } from "@supabase/supabase-js";
 
 const inter = Inter({ subsets: ["latin"] });
 export const dynamic = "force-dynamic";
-
-// Initialize the read-only client for UI updates
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-);
 
 export default function DashboardPage() {
   const { address } = useAccount();
@@ -21,7 +15,7 @@ export default function DashboardPage() {
   const [isTradeActive, setIsTradeActive] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  // NEW: Royalty Eligibility States [Spec 13.0]
+  // Eligibility States [Spec 13.0]
   const [hasRealizedProfit, setHasRealizedProfit] = useState(false);
   const [isCurrentlyActive, setIsCurrentlyActive] = useState(false);
 
@@ -33,10 +27,20 @@ export default function DashboardPage() {
   const [sellMultiplier, setSellMultiplier] = useState("2");
   const [stallCount] = useState(0);
 
+  // MASTER DEV FIX: Lazy Initialization to prevent Vercel Build Errors
+  const supabase = useMemo(() => {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    // Fallback to placeholder if variables are missing during build phase
+    if (!url || !key) return null;
+    return createClient(url, key);
+  }, []);
+
   // 1. ELIGIBILITY CHECK: Wakes up whenever the wallet connects
   useEffect(() => {
     async function checkRoyaltyStatus() {
-      if (!address) return;
+      if (!address || !supabase) return;
 
       const { data, error } = await supabase
         .from("strategies")
@@ -53,12 +57,10 @@ export default function DashboardPage() {
       }
     }
     checkRoyaltyStatus();
-  }, [address]);
+  }, [address, supabase]);
 
-  // Logic 13.0: Definition of Royalties Active
   const royaltiesEnabled = isCurrentlyActive && hasRealizedProfit;
 
-  // Use the correct project domain for referrals
   const referralLink = address
     ? `https://nollywin.xyz/join?ref=${address}`
     : "Connect Wallet";
@@ -292,7 +294,6 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* DYNAMIC ROYALTY STATUS BOX */}
           <div
             className={`border p-6 flex flex-col justify-center text-center transition-all duration-500 ${
               royaltiesEnabled
