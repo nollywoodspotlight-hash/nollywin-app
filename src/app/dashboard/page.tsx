@@ -4,19 +4,24 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useAccount, useSendTransaction, useDisconnect } from "wagmi";
 import { parseEther } from "viem";
 import { Inter } from "next/font/google";
+import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 
 const inter = Inter({ subsets: ["latin"] });
-
-// 1. Force Next.js to skip static generation for this page
 export const dynamic = "force-dynamic";
 
 export default function DashboardPage() {
-  const { address } = useAccount();
+  const { address, isConnected } = useAccount();
   const { disconnect } = useDisconnect();
+  const router = useRouter();
+
+  // Trade Feed & Selection States
+  const [trades, setTrades] = useState<any[]>([]);
+  const [selectedTrade, setSelectedTrade] = useState<any>(null);
   const [isTradeActive, setIsTradeActive] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  // Royalty Eligibility States
   const [hasRealizedProfit, setHasRealizedProfit] = useState(false);
   const [isCurrentlyActive, setIsCurrentlyActive] = useState(false);
 
@@ -28,30 +33,34 @@ export default function DashboardPage() {
   const [sellMultiplier, setSellMultiplier] = useState("2");
   const [stallCount] = useState(0);
 
-  // 2. MASTER DEV SAFETY GATE: Initialize ONLY if valid credentials exist
+  // 1. SECURITY GUARD: Immediate Redirect on Disconnect
+  useEffect(() => {
+    if (!isConnected) {
+      router.push("/");
+    }
+  }, [isConnected, router]);
+
   const supabase = useMemo(() => {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-    // If we are on the build machine or variables are missing, return null
-    if (!url || !url.startsWith("http") || !key) {
-      return null;
-    }
+    if (!url || !url.startsWith("http") || !key) return null;
     return createClient(url, key);
   }, []);
 
+  // 2. DATA SYNC: Fetch Status and Live Feed
   useEffect(() => {
-    async function checkRoyaltyStatus() {
-      // 3. Early return if supabase didn't initialize or address isn't ready
+    async function syncDashboard() {
       if (!address || !supabase) return;
 
       try {
         const { data, error } = await supabase
           .from("strategies")
-          .select("lifecycle_state, profit_eth")
-          .eq("wallet_address", address);
+          .select("*")
+          .eq("wallet_address", address)
+          .order("created_at", { ascending: false });
 
-        if (data && data.length > 0) {
+        if (data) {
+          setTrades(data);
           const active = data.some((s) => s.lifecycle_state === "ACTIVE");
           const profit = data.some((s) => (s.profit_eth || 0) > 0);
 
@@ -60,17 +69,39 @@ export default function DashboardPage() {
           if (active) setIsTradeActive(true);
         }
       } catch (err) {
-        console.error("Supabase check failed:", err);
+        console.error("Dashboard sync error:", err);
       }
     }
-    checkRoyaltyStatus();
+    syncDashboard();
   }, [address, supabase]);
 
   const royaltiesEnabled = isCurrentlyActive && hasRealizedProfit;
-
   const referralLink = address
     ? `https://nollywin.xyz/join?ref=${address}`
     : "Connect Wallet";
+
+  // 3. ABORT ENGINE: Sell back to Eth and Archive
+  const handleAbortTrade = async (trade: any) => {
+    const confirmAbort = window.confirm(
+      "CRITICAL: Abort production and liquidate to ETH immediately?",
+    );
+    if (!confirmAbort) return;
+
+    try {
+      const response = await fetch("/api/abort", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tradeId: trade.id, wallet_address: address }),
+      });
+
+      if (response.ok) {
+        setSelectedTrade(null);
+        window.location.reload(); // Refresh to sync Archive and Dashboard
+      }
+    } catch (error) {
+      alert("Abort failed. System remains online.");
+    }
+  };
 
   const handleTradeAction = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -79,7 +110,6 @@ export default function DashboardPage() {
         alert("Invalid Base Contract Address");
         return;
       }
-
       try {
         sendTransaction({
           to: "0x0000000000000000000000000000000000000000" as `0x${string}`,
@@ -116,6 +146,17 @@ export default function DashboardPage() {
       setTimeout(() => setCopied(false), 2000);
     }
   };
+
+  // 4. ACCESS DENIED OVERLAY
+  if (!isConnected) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="animate-pulse text-[#b87209] font-black uppercase italic tracking-[0.3em] text-xs">
+          ACCESS DENIED // REDIRECTING...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -158,6 +199,7 @@ export default function DashboardPage() {
           </p>
         </div>
 
+        {/* TRADING CONSOLE */}
         <div className="bg-[#080808] border border-[#b87209]/40 rounded-sm overflow-hidden shadow-2xl">
           <div className="bg-[#b87209]/10 border-b border-[#b87209]/20 px-4 py-2 flex justify-between items-center">
             <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest italic text-[#b87209]">
@@ -188,7 +230,6 @@ export default function DashboardPage() {
                     className="w-full bg-black border-b-2 border-white/10 py-2 text-sm md:text-xl font-mono font-bold text-white focus:border-[#b87209] outline-none disabled:opacity-40"
                   />
                 </div>
-
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-white/5 pt-4">
                   <div>
                     <label className="text-gray-600 uppercase text-[7px] md:text-[9px] font-black italic block mb-1">
@@ -236,23 +277,6 @@ export default function DashboardPage() {
                     </select>
                   </div>
                 </div>
-
-                <div className="pt-2">
-                  <div className="flex justify-between items-end mb-1 text-[7px] md:text-[9px]">
-                    <p className="text-red-900 uppercase font-black italic">
-                      Stall Counter (Auto-Cancel at 3)
-                    </p>
-                    <p className="font-bold text-red-600 italic">
-                      {stallCount}/3
-                    </p>
-                  </div>
-                  <div className="w-full bg-zinc-900 h-1 rounded-full overflow-hidden">
-                    <div
-                      className="bg-red-600 h-full transition-all duration-1000"
-                      style={{ width: `${(stallCount / 3) * 100}%` }}
-                    />
-                  </div>
-                </div>
               </div>
 
               <div className="flex flex-col items-center justify-center pt-2 lg:pt-0 lg:border-l lg:border-white/5 lg:pl-12">
@@ -265,9 +289,7 @@ export default function DashboardPage() {
                   }`}
                 >
                   <span className="text-lg md:text-3xl font-black uppercase italic tracking-tighter">
-                    {isTradeActive
-                      ? "Manual Override / Abort"
-                      : "Start Production"}
+                    {isTradeActive ? "Manual Override" : "Start Production"}
                   </span>
                 </button>
               </div>
@@ -275,16 +297,105 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* 5. LIVE PRODUCTION FEED */}
+        <div className="mt-12 space-y-4">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="h-[1px] flex-grow bg-gradient-to-r from-transparent via-[#b87209]/40 to-transparent" />
+            <h2 className="text-[#b87209] font-black uppercase italic tracking-[0.3em] text-xs whitespace-nowrap">
+              Live Production Feed
+            </h2>
+            <div className="h-[1px] flex-grow bg-gradient-to-r from-[#b87209]/40 via-transparent to-transparent" />
+          </div>
+          <div className="grid grid-cols-1 gap-2">
+            {trades.filter((t) => t.lifecycle_state === "ACTIVE").length ===
+            0 ? (
+              <p className="text-center text-gray-700 font-black uppercase italic text-[10px] tracking-widest py-12 border border-dashed border-white/5">
+                No active scripts in production.
+              </p>
+            ) : (
+              trades
+                .filter((t) => t.lifecycle_state === "ACTIVE")
+                .map((trade) => (
+                  <button
+                    key={trade.id}
+                    onClick={() => setSelectedTrade(trade)}
+                    className="group flex justify-between items-center bg-[#080808] border border-white/5 hover:border-[#b87209]/50 p-4 transition-all duration-300"
+                  >
+                    <div className="flex items-center gap-6 text-left">
+                      <span className="text-[#b87209] font-black italic text-xs tracking-tighter">
+                        /{trade.id.toString().padStart(3, "0")}
+                      </span>
+                      <div>
+                        <p className="text-white font-bold uppercase text-[10px] tracking-widest leading-none">
+                          Target: {trade.target_contract_address.slice(0, 10)}
+                          ...
+                        </p>
+                        <p className="text-gray-500 text-[8px] uppercase mt-1 italic font-black">
+                          Investment: {trade.dca_amount_eth} ETH
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-[9px] font-black italic text-[#b87209] group-hover:animate-pulse">
+                      [ VIEW INTEL ]
+                    </span>
+                  </button>
+                ))
+            )}
+          </div>
+        </div>
+
+        {/* 6. MISSION BRIEFING MODAL */}
+        {selectedTrade && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm">
+            <div className="w-full max-w-xl bg-[#080808] border-2 border-[#b87209] shadow-[0_0_50px_rgba(184,114,9,0.2)]">
+              <div className="bg-[#b87209] px-6 py-3 flex justify-between items-center">
+                <h3 className="text-black font-black uppercase italic tracking-tighter text-lg">
+                  Mission Briefing: {selectedTrade.id}
+                </h3>
+                <button
+                  onClick={() => setSelectedTrade(null)}
+                  className="text-black font-black hover:scale-125 transition-transform"
+                >
+                  [X]
+                </button>
+              </div>
+              <div className="p-8 space-y-8">
+                <div className="grid grid-cols-2 gap-6 border-b border-white/5 pb-8">
+                  <div>
+                    <p className="text-[#b87209] text-[9px] uppercase font-black italic mb-1">
+                      Contract ID
+                    </p>
+                    <p className="text-white text-xs truncate font-mono">
+                      {selectedTrade.target_contract_address}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[#b87209] text-[9px] uppercase font-black italic mb-1">
+                      Production State
+                    </p>
+                    <p className="text-white text-xs uppercase font-black italic">
+                      Active Strategy
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleAbortTrade(selectedTrade)}
+                  className="w-full py-6 bg-red-600 hover:bg-red-700 text-white font-black uppercase italic text-xl tracking-tighter shadow-2xl transition-all active:scale-95"
+                >
+                  ABORT & LIQUIDATE TO ETH
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* FOOTER & REFERRALS */}
+        <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="md:col-span-2 bg-[#080808] border border-white/5 p-5 md:p-8">
             <h3 className="text-[#b87209] uppercase font-black tracking-widest text-xs italic mb-2 underline decoration-white/10 underline-offset-8">
-              Founder's Cut: Production Crew
+              Founder&apos;s Cut: Production Crew
             </h3>
-            <p className="text-gray-500 text-[8px] md:text-[9px] uppercase italic font-bold mb-4 leading-tight">
-              Referral rewards require at least one profitable trade and one
-              active strategy. [Spec 13.0]
-            </p>
-            <div className="flex border border-[#b87209]/40">
+            <div className="flex border border-[#b87209]/40 mt-4">
               <div className="flex-grow bg-black p-4 font-mono text-[8px] text-[#b87209] truncate italic select-all">
                 {referralLink}
               </div>
@@ -296,7 +407,6 @@ export default function DashboardPage() {
               </button>
             </div>
           </div>
-
           <div
             className={`border p-6 flex flex-col justify-center text-center transition-all duration-500 ${
               royaltiesEnabled
@@ -311,23 +421,12 @@ export default function DashboardPage() {
             >
               1% Founders Royalties {royaltiesEnabled ? "Active" : "Inactive"}
               <br />
-              {!royaltiesEnabled && (
-                <span className="text-[6px] text-red-900 block mt-1">
-                  LOCKED // REQUIRE ACTIVE TRADE + PROFIT
-                </span>
-              )}
-              {royaltiesEnabled && (
-                <span className="text-[6px] text-[#b87209] block mt-1">
-                  AUTHORIZED // REWARDS ENABLED
-                </span>
-              )}
+              {!royaltiesEnabled
+                ? "LOCKED // REQUIRE PROFIT"
+                : "AUTHORIZED // REWARDS ENABLED"}
             </p>
           </div>
         </div>
-
-        <footer className="mt-16 opacity-20 text-[8px] uppercase tracking-[0.4em] text-center italic font-black">
-          © 2026 NollyWin Productions • Onchain Non-Custodial [Spec 8.3]
-        </footer>
       </div>
     </div>
   );

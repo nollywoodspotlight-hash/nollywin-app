@@ -2,6 +2,8 @@
 import React, { useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { Inter } from "next/font/google";
+import { useAccount } from "wagmi";
+import { useRouter } from "next/navigation";
 import {
   Share2,
   TrendingUp,
@@ -22,46 +24,49 @@ const supabase =
     : null;
 
 export default function ArchivePage() {
+  const { address, isConnected } = useAccount();
+  const router = useRouter();
   const [trades, setTrades] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("ALL");
 
+  // 1. SECURITY GUARD: Redirect to home if disconnected
   useEffect(() => {
-    if (supabase) {
+    if (!isConnected) {
+      router.push("/");
+    }
+  }, [isConnected, router]);
+
+  useEffect(() => {
+    if (supabase && isConnected) {
       fetchLiveArchive();
-    } else {
+    } else if (!supabase) {
       setLoading(false);
       console.warn("Supabase configuration missing or invalid.");
     }
-  }, []);
+  }, [isConnected]);
 
   async function fetchLiveArchive() {
     try {
       setLoading(true);
-      if (!supabase) return;
+      if (!supabase || !address) return;
 
-      // 10.2 Database Integration: Fetching both Completed and Cancelled states
       const { data, error } = await supabase
         .from("strategies")
         .select("*")
+        .eq("wallet_address", address) // Only show records for the connected actor
         .in("lifecycle_state", ["COMPLETED", "CANCELLED"])
-        .order("created_at", { ascending: false }); // Sort Newest to Oldest
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
 
-      // 2.1 Core Financial Logic Integration [MASTER SPEC UPDATE]
       const categorized = (data || []).map((trade: any) => {
-        // Use the profit recorded in DB (calculated during the Abort or Auto-Sell)
         const profit = trade.profit_eth || 0;
-
         let type = "CANCELLED";
 
-        // Success Archive Logic: COMPLETED status gets split into PROFIT or LOSS
         if (trade.lifecycle_state === "COMPLETED") {
           type = profit > 0 ? "PROFIT" : "LOSS";
-        }
-        // Cancelled Archive Logic: Manual Aborts via /api/abort
-        else if (trade.lifecycle_state === "CANCELLED") {
+        } else if (trade.lifecycle_state === "CANCELLED") {
           type = "CANCELLED";
         }
 
@@ -94,6 +99,17 @@ export default function ArchivePage() {
     );
   };
 
+  // 2. ACCESS DENIED GATE: Prevent UI flicker if not connected
+  if (!isConnected) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="animate-pulse text-[#b87209] font-black uppercase italic tracking-[0.3em] text-xs">
+          ENCRYPTED ARCHIVE // REDIRECTING...
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className={`${inter.className} min-h-screen bg-black text-white antialiased`}
@@ -105,7 +121,7 @@ export default function ArchivePage() {
             Production <span className="text-[#b87209]">Archive</span>
           </h1>
           <p className="text-gray-500 uppercase tracking-[0.3em] text-[10px] md:text-xs mt-2 font-bold italic">
-            Historical Records / Performance Logs
+            Historical Records / Performance Logs / {address?.slice(0, 6)}...
           </p>
         </div>
 
