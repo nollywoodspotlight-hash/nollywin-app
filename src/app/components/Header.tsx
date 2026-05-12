@@ -3,15 +3,24 @@
 import React, { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { ConnectWallet, Wallet } from "@coinbase/onchainkit/wallet";
+import { useAccount, useDisconnect } from "wagmi";
 import { Menu, X } from "lucide-react";
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { isConnected, address } = useAccount();
+  const { disconnect } = useDisconnect();
   const router = useRouter();
 
   const handleConnect = useCallback(() => {
     setIsMenuOpen(false);
   }, []);
+
+  const handleTerminate = () => {
+    disconnect();
+    setIsMenuOpen(false);
+    router.push("/");
+  };
 
   const navLinks = [
     { name: "Home", path: "/" },
@@ -21,9 +30,9 @@ export default function Header() {
   ];
 
   return (
-    <header className="fixed top-0 w-full z-[100] bg-black/80 backdrop-blur-md border-b border-[#b87209]/20 h-20">
+    <header className="fixed top-0 w-full z-[200] bg-black/90 backdrop-blur-md border-b border-[#b87209]/20 h-20">
       <div className="max-w-7xl mx-auto px-4 h-full flex items-center justify-between">
-        {/* NOLLYWIN LOGO: NW Nollywin by Nollywood spotlight */}
+        {/* LOGO */}
         <div
           className="flex flex-col cursor-pointer shrink-0 leading-none"
           onClick={() => router.push("/")}
@@ -56,29 +65,42 @@ export default function Header() {
 
         {/* ACTION CONTAINER */}
         <div className="flex items-center space-x-3">
-          {/* MOBILE CONNECT BUTTON */}
-          <div className="flex md:hidden items-center">
-            <Wallet>
-              <ConnectWallet
-                onConnect={handleConnect}
-                className="!flex bg-[#b87209] text-black font-black italic text-[10px] uppercase py-2 px-4 rounded-none"
-              >
-                Connect
-              </ConnectWallet>
-            </Wallet>
-          </div>
+          {isConnected ? (
+            /* DISCONNECT / TERMINATE BUTTON (When Connected) */
+            <button
+              onClick={handleTerminate}
+              className="group relative px-4 py-2 md:px-6 md:py-3 border border-[#b87209]/40 hover:border-[#b87209] bg-black transition-all cursor-pointer pointer-events-auto"
+            >
+              <span className="relative z-10 text-[10px] md:text-[11px] font-black uppercase italic tracking-widest text-[#b87209]">
+                [ Terminate Session / {address?.slice(0, 4)}... ]
+              </span>
+            </button>
+          ) : (
+            /* CONNECT BUTTONS (When Disconnected) */
+            <>
+              <div className="flex md:hidden items-center">
+                <Wallet>
+                  <ConnectWallet
+                    onConnect={handleConnect}
+                    className="!flex bg-[#b87209] text-black font-black italic text-[10px] uppercase py-2 px-4 rounded-none"
+                  >
+                    Connect
+                  </ConnectWallet>
+                </Wallet>
+              </div>
 
-          {/* DESKTOP CONNECT BUTTON */}
-          <div className="hidden md:flex items-center">
-            <Wallet>
-              <ConnectWallet
-                onConnect={handleConnect}
-                className="bg-[#b87209] text-black font-black italic text-[11px] uppercase py-3 px-6 rounded-none hover:bg-white transition-all"
-              >
-                Connect Wallet
-              </ConnectWallet>
-            </Wallet>
-          </div>
+              <div className="hidden md:flex items-center">
+                <Wallet>
+                  <ConnectWallet
+                    onConnect={handleConnect}
+                    className="bg-[#b87209] text-black font-black italic text-[11px] uppercase py-3 px-6 rounded-none hover:bg-white transition-all"
+                  >
+                    Connect Wallet
+                  </ConnectWallet>
+                </Wallet>
+              </div>
+            </>
+          )}
 
           {/* HAMBURGER MENU */}
           <button
@@ -92,7 +114,7 @@ export default function Header() {
 
       {/* MOBILE NAVIGATION OVERLAY */}
       {isMenuOpen && (
-        <div className="md:hidden absolute top-20 left-0 w-full bg-black border-b border-[#b87209]/20 p-8 flex flex-col space-y-6 z-[101] animate-in fade-in slide-in-from-top-2">
+        <div className="md:hidden absolute top-20 left-0 w-full bg-black border-b border-[#b87209]/20 p-8 flex flex-col space-y-6 z-[201] animate-in fade-in slide-in-from-top-2">
           {navLinks.map((link) => (
             <button
               key={link.name}
@@ -105,6 +127,14 @@ export default function Header() {
               {link.name}
             </button>
           ))}
+          {isConnected && (
+            <button
+              onClick={handleTerminate}
+              className="text-left text-xl font-black italic uppercase text-red-600 border-l-2 border-red-600/40 pl-4"
+            >
+              Terminate Session
+            </button>
+          )}
         </div>
       )}
     </header>
