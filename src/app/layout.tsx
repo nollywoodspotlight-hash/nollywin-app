@@ -8,13 +8,13 @@ import Footer from "./components/FooterX";
 
 const inter = Inter({ subsets: ["latin"] });
 
-// Server-side Metadata (Vital for SEO and Vercel Build)
+// Server-side Metadata (Fixed for Vercel)
 export const metadata: Metadata = {
   title: "NollyWin | Cinematic DCA on Base",
   description: "Automated trading with a Nollywood soul. Powered by Base.",
 };
 
-// Vital for Mobile Design Framing
+// Mobile Design Framing
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
@@ -34,13 +34,23 @@ export default function RootLayout({
         className={`${inter.className} bg-black antialiased text-white min-h-screen flex flex-col overflow-x-hidden`}
       >
         <Providers>
-          {/* Your Custom Header with the Terminate Session logic */}
+          {/* RESTORED: The Galaxy/Spotlight Background Logic */}
+          <div className="fixed inset-0 z-0 pointer-events-none">
+            {/* The Brand Gold Radial Glow */}
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_10%,rgba(184,114,9,0.15),transparent_60%)]" />
+
+            {/* Cinematic Grain/Noise Overlay */}
+            <div className="absolute inset-0 opacity-[0.03] bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
+          </div>
+
+          {/* Your Custom Header (z-300) */}
           <Header />
 
-          {/* The main content area with proper mobile spacing */}
-          <main className="relative flex-grow w-full pt-20">{children}</main>
+          {/* The main content area (z-10 ensures it stays above the glow) */}
+          <main className="relative z-10 flex-grow w-full pt-20">
+            {children}
+          </main>
 
-          {/* Your Branding Footer */}
           <Footer />
         </Providers>
       </body>
