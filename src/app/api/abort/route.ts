@@ -1,14 +1,24 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 
-// Initialize Supabase with Service Role for administrative overrides
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-);
-
 export async function POST(req: Request) {
   try {
+    // MASTER DEV FIX: Initialize inside the handler to prevent Vercel build-time crashes
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !supabaseKey) {
+      console.error(
+        "❌ Critical: Supabase environment variables are missing on the server.",
+      );
+      return NextResponse.json(
+        { error: "Protocol configuration incomplete" },
+        { status: 500 },
+      );
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
     const { tradeId, wallet_address } = await req.json();
 
     if (!tradeId || !wallet_address) {
@@ -36,13 +46,12 @@ export async function POST(req: Request) {
     /**
      * MASTER DEV LOGIC [Spec 17.0]
      * In a live environment, this is where you would call the 1inch API
-     * to sell the tokens back to ETH. For now, we simulate the liquidation
-     * and move the record to the Archive.
+     * to sell the tokens back to ETH. For now, we simulate the liquidation.
      */
 
-    // Simulate current value for profit/loss calculation
-    const simulatedExitValue = trade.dca_amount_eth * 1.1; // Simulated 10% gain
-    const finalProfit = simulatedExitValue - trade.dca_amount_eth;
+    // Simulate current value for profit/loss calculation (10% gain simulation)
+    const simulatedExitValue = parseFloat(trade.dca_amount_eth) * 1.1;
+    const finalProfit = simulatedExitValue - parseFloat(trade.dca_amount_eth);
 
     // 2. Terminate and Move to Archive
     const { error: updateError } = await supabase
