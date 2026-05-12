@@ -28,6 +28,7 @@
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-fast-marquee": "^1.6.5",
+    "siwe": "^3.0.0",
     "viem": "^2.48.11",
     "wagmi": "^2.19.5",
     "zustand": "^5.0.12"

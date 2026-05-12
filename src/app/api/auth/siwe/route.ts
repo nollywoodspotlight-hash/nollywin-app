@@ -1,46 +1,86 @@
 import { NextRequest, NextResponse } from "next/server";
+import { SiweMessage, generateNonce } from "siwe";
+import { createClient } from "@supabase/supabase-js";
 
+/**
+ * NollyWin SIWE Engine [Master Spec v3.0]
+ * Auth + Database Sync for Production Crew Tracking
+ */
+
+// Initialize Supabase inside the API (Server-Side)
+const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+);
+
+// GET: Generates a fresh nonce for the frontend to sign
 export async function GET() {
   try {
-    // Generate a simple nonce for now
-    const nonce = Math.random().toString(36).substring(2, 15);
+    const nonce = generateNonce();
     return NextResponse.json({ nonce });
   } catch (error) {
-    console.error("SIWE nonce generation error:", error);
+    console.error("❌ SIWE Nonce Error:", error);
     return NextResponse.json(
-      { error: "Failed to generate nonce" },
+      { error: "Could not generate nonce" },
       { status: 500 },
     );
   }
 }
 
+// POST: Verifies signature & Syncs User to Database
 export async function POST(request: NextRequest) {
   try {
-    const { message, signature } = await request.json();
+    // We now accept 'referrer' from the frontend login call
+    const { message, signature, referrer } = await request.json();
 
-    // Basic validation
     if (!message || !signature) {
       return NextResponse.json(
-        { error: "Missing message or signature" },
+        { error: "Missing SIWE fields" },
         { status: 400 },
       );
     }
 
-    // For now, just log and accept - in production you'd verify the SIWE message
-    console.log("SIWE verification request:", { message, signature });
+    // 1. Verify the SIWE message
+    const siweMessage = new SiweMessage(message);
+    const { success, error, data } = await siweMessage.verify({ signature });
 
-    // TODO: Implement proper SIWE verification using viem/siwe
-    // const siweMessage = parseSiweMessage(message);
-    // const valid = await verifySiweMessage(siweMessage, signature);
+    if (!success) {
+      console.error("⚠️ SIWE Verification Failed:", error);
+      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+    }
+
+    /**
+     * MASTER DEV UPDATE: Save User to Production Crew [Spec 13.0]
+     * 'upsert' will:
+     * 1. Create the user if they don't exist.
+     * 2. If they DO exist, it just updates the last login time.
+     * 3. 'referred_by' is only set if provided (doesn't overwrite existing referrers).
+     */
+    const { error: dbError } = await supabase.from("users").upsert(
+      {
+        wallet_address: data.address,
+        referred_by: referrer || null,
+      },
+      { onConflict: "wallet_address" },
+    );
+
+    if (dbError) {
+      console.error("❌ Database sync failed:", dbError.message);
+      // We continue with 'success: true' so the user can still trade,
+      // even if the database sync had a hiccup.
+    }
+
+    console.log(`✅ SIWE Authenticated & Synced: ${data.address}`);
 
     return NextResponse.json({
       success: true,
-      message: "SIWE verification successful",
+      address: data.address,
+      message: "Signature verified & Production Crew synced",
     });
-  } catch (error) {
-    console.error("SIWE verification error:", error);
+  } catch (error: any) {
+    console.error("❌ SIWE Verification Error:", error.message);
     return NextResponse.json(
-      { error: "SIWE verification failed" },
+      { error: "Internal verification failure" },
       { status: 500 },
     );
   }

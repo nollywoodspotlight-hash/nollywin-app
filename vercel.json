@@ -6,12 +6,6 @@
   "outputDirectory": ".next",
   "cleanUrls": true,
   "trailingSlash": false,
-  "crons": [
-    {
-      "path": "/api/cron/execute",
-      "schedule": "*/2 * * * *"
-    }
-  ],
   "headers": [
     {
       "source": "/(.*)",

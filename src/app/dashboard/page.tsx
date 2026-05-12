@@ -1,53 +1,82 @@
 "use client";
 
-import React, { useState } from "react";
-import { useAccount, useSendTransaction } from "wagmi";
+import React, { useState, useEffect } from "react";
+import { useAccount, useSendTransaction, useDisconnect } from "wagmi";
 import { parseEther } from "viem";
 import { Inter } from "next/font/google";
+import { createClient } from "@supabase/supabase-js"; // Ensure this is installed
 
 const inter = Inter({ subsets: ["latin"] });
 export const dynamic = "force-dynamic";
 
+// Initialize the read-only client for UI updates
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+);
+
 export default function DashboardPage() {
   const { address } = useAccount();
+  const { disconnect } = useDisconnect();
   const [isTradeActive, setIsTradeActive] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  // Hook to trigger wallet authorization
+  // NEW: Royalty Eligibility States [Spec 13.0]
+  const [hasRealizedProfit, setHasRealizedProfit] = useState(false);
+  const [isCurrentlyActive, setIsCurrentlyActive] = useState(false);
+
   const { sendTransaction } = useSendTransaction();
 
-  // INTERACTIVE CONFIGURATION [Master Spec 2.0]
   const [contractAddress, setContractAddress] = useState("");
   const [dcaAmount, setDcaAmount] = useState("0.01");
   const [frequency, setFrequency] = useState("4");
   const [sellMultiplier, setSellMultiplier] = useState("2");
   const [stallCount] = useState(0);
 
+  // 1. ELIGIBILITY CHECK: Wakes up whenever the wallet connects
+  useEffect(() => {
+    async function checkRoyaltyStatus() {
+      if (!address) return;
+
+      const { data, error } = await supabase
+        .from("strategies")
+        .select("lifecycle_state, profit_eth")
+        .eq("wallet_address", address);
+
+      if (data && data.length > 0) {
+        const active = data.some((s) => s.lifecycle_state === "ACTIVE");
+        const profit = data.some((s) => (s.profit_eth || 0) > 0);
+
+        setIsCurrentlyActive(active);
+        setHasRealizedProfit(profit);
+        if (active) setIsTradeActive(true);
+      }
+    }
+    checkRoyaltyStatus();
+  }, [address]);
+
+  // Logic 13.0: Definition of Royalties Active
+  const royaltiesEnabled = isCurrentlyActive && hasRealizedProfit;
+
+  // Use the correct project domain for referrals
   const referralLink = address
-    ? `https://nollywin.com/join?ref=${address}`
+    ? `https://nollywin.xyz/join?ref=${address}`
     : "Connect Wallet";
 
-  // MASTER DEV UPDATE: Logic 7.1 - Connects UI to Blockchain + Supabase
   const handleTradeAction = async (e: React.MouseEvent) => {
     e.preventDefault();
-
     if (!isTradeActive) {
-      // 1. Validation
       if (contractAddress.length < 42) {
         alert("Invalid Base Contract Address");
         return;
       }
 
       try {
-        // 2. TRIGGER WALLET NOTIFICATION (Pay the protocol)
-        // REPLACE this 0x000 with your real Vault/Treasury address
         sendTransaction({
           to: "0x0000000000000000000000000000000000000000" as `0x${string}`,
           value: parseEther(dcaAmount),
         });
 
-        // 3. SAVE TO SUPABASE (Wake up the Bot)
-        // This calls the API route we built earlier
         const response = await fetch("/api/activate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -60,18 +89,13 @@ export default function DashboardPage() {
           }),
         });
 
-        if (!response.ok) {
-          throw new Error("Failed to save strategy to database.");
-        }
-
+        if (!response.ok) throw new Error("Database sync failed");
         setIsTradeActive(true);
-        console.log("🚀 Production Started: Strategy synced to Supabase.");
+        setIsCurrentlyActive(true);
       } catch (error) {
         console.error("❌ Startup Failed:", error);
-        alert("Could not start production. Check console for details.");
       }
     } else {
-      // Manual Override / Abort logic
       setIsTradeActive(false);
     }
   };
@@ -88,9 +112,34 @@ export default function DashboardPage() {
     <div
       className={`${inter.className} min-h-screen bg-black text-white antialiased`}
     >
+      {/* NOIR NAV BAR */}
+      <nav className="relative z-[70] flex justify-between items-center px-6 py-6 max-w-5xl mx-auto">
+        <div className="flex items-center gap-2">
+          <div
+            className={`w-2 h-2 rounded-full animate-pulse ${
+              isCurrentlyActive ? "bg-green-500" : "bg-[#b87209]"
+            }`}
+          />
+          <span className="text-[10px] font-black uppercase italic tracking-[0.3em] text-[#b87209]">
+            {isCurrentlyActive ? "Strategy Online" : "System Standby"}
+          </span>
+        </div>
+
+        <button
+          onClick={() => disconnect()}
+          className="group relative px-4 py-1 border border-[#b87209]/30 hover:border-[#b87209] transition-all duration-300"
+        >
+          <div className="absolute inset-0 bg-[#b87209]/5 group-hover:bg-[#b87209]/10 transition-colors" />
+          <span className="relative text-[9px] font-black uppercase italic tracking-widest text-[#b87209]">
+            [ Terminate Session / {address?.slice(0, 4)}...{address?.slice(-4)}{" "}
+            ]
+          </span>
+        </button>
+      </nav>
+
       <div className="fixed inset-0 bg-[radial-gradient(circle_at_50%_10%,rgba(184,114,9,0.12),transparent_60%)] pointer-events-none" />
 
-      <div className="relative z-50 max-w-5xl mx-auto px-4 pt-24 pb-12 pointer-events-auto">
+      <div className="relative z-50 max-w-5xl mx-auto px-4 pt-12 pb-12 pointer-events-auto">
         {/* HEADER */}
         <div className="border-l-2 border-[#b87209] pl-4 mb-6 italic">
           <h1 className="text-xl md:text-5xl font-black uppercase tracking-tighter text-white leading-none">
@@ -120,7 +169,6 @@ export default function DashboardPage() {
           <div className="p-4 md:p-10">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
               <div className="space-y-6">
-                {/* 1. Target Contract ID (CA) */}
                 <div>
                   <label className="text-[#b87209] uppercase text-[8px] md:text-[10px] font-black tracking-widest mb-1 block italic">
                     Target Contract ID (CA)
@@ -136,7 +184,6 @@ export default function DashboardPage() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-white/5 pt-4">
-                  {/* 2. DCA Size */}
                   <div>
                     <label className="text-gray-600 uppercase text-[7px] md:text-[9px] font-black italic block mb-1">
                       DCA Size (ETH)
@@ -150,8 +197,6 @@ export default function DashboardPage() {
                       className="w-full bg-transparent border-b border-white/10 text-lg font-bold italic text-white outline-none disabled:opacity-40"
                     />
                   </div>
-
-                  {/* 3. Frequency */}
                   <div>
                     <label className="text-gray-600 uppercase text-[7px] md:text-[9px] font-black italic block mb-1">
                       Frequency
@@ -167,8 +212,6 @@ export default function DashboardPage() {
                       <option value="8">8 Hours</option>
                     </select>
                   </div>
-
-                  {/* 4. Sell Options */}
                   <div>
                     <label className="text-gray-600 uppercase text-[7px] md:text-[9px] font-black italic block mb-1">
                       Sell Option
@@ -188,7 +231,6 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
-                {/* 5.2 Stall Monitor */}
                 <div className="pt-2">
                   <div className="flex justify-between items-end mb-1 text-[7px] md:text-[9px]">
                     <p className="text-red-900 uppercase font-black italic">
@@ -207,7 +249,6 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              {/* ACTION BUTTON */}
               <div className="flex flex-col items-center justify-center pt-2 lg:pt-0 lg:border-l lg:border-white/5 lg:pl-12">
                 <button
                   onClick={handleTradeAction}
@@ -251,13 +292,31 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="bg-[#b87209]/5 border border-[#b87209]/20 p-6 flex flex-col justify-center text-center">
-            <p className="text-[7px] md:text-[10px] text-[#b87209] font-black uppercase italic leading-loose tracking-widest">
-              3% fee applies ONLY to profits.
+          {/* DYNAMIC ROYALTY STATUS BOX */}
+          <div
+            className={`border p-6 flex flex-col justify-center text-center transition-all duration-500 ${
+              royaltiesEnabled
+                ? "bg-[#b87209]/10 border-[#b87209]"
+                : "bg-red-950/20 border-red-900/50"
+            }`}
+          >
+            <p
+              className={`text-[7px] md:text-[10px] font-black uppercase italic leading-loose tracking-widest ${
+                royaltiesEnabled ? "text-[#b87209]" : "text-red-600"
+              }`}
+            >
+              1% Founders Royalties {royaltiesEnabled ? "Active" : "Inactive"}
               <br />
-              No fees on principal or losses.
-              <br />
-              [Spec 13.0]
+              {!royaltiesEnabled && (
+                <span className="text-[6px] text-red-900 block mt-1">
+                  LOCKED // REQUIRE ACTIVE TRADE + PROFIT
+                </span>
+              )}
+              {royaltiesEnabled && (
+                <span className="text-[6px] text-[#b87209] block mt-1">
+                  AUTHORIZED // REWARDS ENABLED
+                </span>
+              )}
             </p>
           </div>
         </div>

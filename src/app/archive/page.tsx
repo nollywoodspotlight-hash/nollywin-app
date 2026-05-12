@@ -13,7 +13,6 @@ import {
 const inter = Inter({ subsets: ["latin"] });
 
 // --- VERCEL BUILD FIX: Strict Safe Initialization ---
-// We check for 'http' to ensure it's a valid URL string before initializing
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 
@@ -31,7 +30,6 @@ export default function ArchivePage() {
     if (supabase) {
       fetchLiveArchive();
     } else {
-      // If supabase is null (e.g. during Vercel build), we stop loading and show empty state
       setLoading(false);
       console.warn("Supabase configuration missing or invalid.");
     }
@@ -42,22 +40,29 @@ export default function ArchivePage() {
       setLoading(true);
       if (!supabase) return;
 
-      // 10.2 Database Integration
+      // 10.2 Database Integration: Fetching both Completed and Cancelled states
       const { data, error } = await supabase
         .from("strategies")
         .select("*")
         .in("lifecycle_state", ["COMPLETED", "CANCELLED"])
-        .order("id", { ascending: false });
+        .order("created_at", { ascending: false }); // Sort Newest to Oldest
 
       if (error) throw error;
 
-      // 2.1 Core Financial Logic Integration
+      // 2.1 Core Financial Logic Integration [MASTER SPEC UPDATE]
       const categorized = (data || []).map((trade: any) => {
-        const profit = trade.final_sell_eth - trade.total_cost_basis_eth;
+        // Use the profit recorded in DB (calculated during the Abort or Auto-Sell)
+        const profit = trade.profit_eth || 0;
 
         let type = "CANCELLED";
+
+        // Success Archive Logic: COMPLETED status gets split into PROFIT or LOSS
         if (trade.lifecycle_state === "COMPLETED") {
           type = profit > 0 ? "PROFIT" : "LOSS";
+        }
+        // Cancelled Archive Logic: Manual Aborts via /api/abort
+        else if (trade.lifecycle_state === "CANCELLED") {
+          type = "CANCELLED";
         }
 
         return { ...trade, profit, type };
@@ -76,14 +81,12 @@ export default function ArchivePage() {
   );
 
   const handleShare = (trade: any) => {
-    // 15.0 Social Proofing logic
     const text =
       trade.type === "PROFIT"
-        ? `🎬 Production wrap! $${trade.token_ticker} profit: ${(
-            (trade.profit / trade.total_cost_basis_eth) *
-            100
-          ).toFixed(2)}%. Onchain via @NollyWin.`
-        : `🎬 Production Log: Closed $${trade.token_ticker} script on Base. @NollyWin.`;
+        ? `🎬 Production wrap! $${
+            trade.token_ticker || "MEME"
+          } profit: ${trade.profit.toFixed(4)} ETH. Onchain via @NollyWin.`
+        : `🎬 Production Log: Closed script on Base. @NollyWin.`;
 
     window.open(
       `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`,
@@ -106,7 +109,7 @@ export default function ArchivePage() {
           </p>
         </div>
 
-        {/* 10.2 Categorization Tabs */}
+        {/* Categorization Tabs */}
         <div className="flex gap-2 md:gap-4 mb-8 overflow-x-auto pb-2 no-scrollbar">
           {["ALL", "PROFIT", "LOSS", "CANCELLED"].map((cat) => (
             <button
@@ -157,10 +160,15 @@ export default function ArchivePage() {
                   </div>
                   <div>
                     <h3 className="text-2xl font-black italic tracking-tighter uppercase leading-none">
-                      ${trade.token_ticker}
+                      $
+                      {trade.token_ticker ||
+                        trade.target_contract_address.slice(0, 6)}
                     </h3>
                     <p className="text-[9px] text-gray-600 font-bold uppercase tracking-widest mt-1">
-                      Script ID: {trade.id} • {trade.lifecycle_state}
+                      Script ID: {trade.id} •{" "}
+                      {trade.type === "CANCELLED"
+                        ? "ABORTED"
+                        : trade.lifecycle_state}
                     </p>
                   </div>
                 </div>
@@ -180,7 +188,7 @@ export default function ArchivePage() {
                       }`}
                     >
                       {trade.profit > 0 ? "+" : ""}
-                      {(trade.profit || 0).toFixed(4)}
+                      {trade.profit.toFixed(4)}
                     </p>
                   </div>
                 </div>
@@ -198,14 +206,13 @@ export default function ArchivePage() {
             {filteredTrades.length === 0 && (
               <div className="py-20 text-center border border-dashed border-white/10 italic">
                 <p className="text-gray-600 uppercase font-black text-[10px] tracking-widest">
-                  No Production Logs Found.
+                  No Production Logs Found for {filter}.
                 </p>
               </div>
             )}
           </div>
         )}
 
-        {/* 13.0 Mandatory Disclaimer */}
         <div className="mt-12 opacity-30 text-[9px] text-center italic font-bold uppercase tracking-widest leading-relaxed">
           “3% fee applies ONLY to profits • No fees on principal or losses”
         </div>

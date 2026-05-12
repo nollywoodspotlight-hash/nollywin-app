@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import Link from "next/link"; // FIXED: Changed from next/navigation
+import Link from "next/link";
 
 export default function AboutPage() {
   return (
@@ -23,18 +23,18 @@ export default function AboutPage() {
       </section>
 
       {/* 2. CORE PROTOCOL LOGIC */}
-      <section className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+      <section className="max-w-2xl mx-auto">
         <div className="space-y-6">
-          <h3 className="text-2xl font-black uppercase italic text-white tracking-tight">
+          <h3 className="text-2xl font-black uppercase italic text-white tracking-tight text-center md:text-left">
             How the <span className="text-[#b87209]">Engine</span> Works
           </h3>
-          <p className="text-gray-400 text-sm leading-relaxed">
+          <p className="text-gray-400 text-sm leading-relaxed text-center md:text-left">
             Built on the{" "}
             <span className="text-white font-bold">Base network</span>, NollyWin
             is a self-custodial Micro-DCA automation protocol designed for
             maximum transparency and user protection.
           </p>
-          <ul className="space-y-4">
+          <ul className="space-y-6 pt-4">
             {[
               {
                 title: "Self-Custodial",
@@ -62,20 +62,6 @@ export default function AboutPage() {
               </li>
             ))}
           </ul>
-        </div>
-        <div className="bg-[#1d02cb]/10 border border-[#b87209]/20 p-8 rounded-sm backdrop-blur-md">
-          <div className="text-[10px] font-black text-[#b87209] uppercase tracking-widest mb-4 italic">
-            Technical Note v2.0
-          </div>
-          <p className="text-white font-mono text-[11px] leading-relaxed">
-            profit = final_sell_eth - total_cost_basis_eth <br />
-            <br />
-            if (profit {">"} 0) {"{"} <br />
-            &nbsp;&nbsp;fee = profit * 0.03; <br />
-            {"}"} else {"{"} <br />
-            &nbsp;&nbsp;fee = 0; <br />
-            {"}"}
-          </p>
         </div>
       </section>
 
