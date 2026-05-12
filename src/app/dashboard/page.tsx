@@ -7,6 +7,8 @@ import { Inter } from "next/font/google";
 import { createClient } from "@supabase/supabase-js";
 
 const inter = Inter({ subsets: ["latin"] });
+
+// 1. Force Next.js to skip static generation for this page
 export const dynamic = "force-dynamic";
 
 export default function DashboardPage() {
@@ -15,7 +17,6 @@ export default function DashboardPage() {
   const [isTradeActive, setIsTradeActive] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  // Eligibility States [Spec 13.0]
   const [hasRealizedProfit, setHasRealizedProfit] = useState(false);
   const [isCurrentlyActive, setIsCurrentlyActive] = useState(false);
 
@@ -27,33 +28,39 @@ export default function DashboardPage() {
   const [sellMultiplier, setSellMultiplier] = useState("2");
   const [stallCount] = useState(0);
 
-  // MASTER DEV FIX: Lazy Initialization to prevent Vercel Build Errors
+  // 2. MASTER DEV SAFETY GATE: Initialize ONLY if valid credentials exist
   const supabase = useMemo(() => {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-    // Fallback to placeholder if variables are missing during build phase
-    if (!url || !key) return null;
+    // If we are on the build machine or variables are missing, return null
+    if (!url || !url.startsWith("http") || !key) {
+      return null;
+    }
     return createClient(url, key);
   }, []);
 
-  // 1. ELIGIBILITY CHECK: Wakes up whenever the wallet connects
   useEffect(() => {
     async function checkRoyaltyStatus() {
+      // 3. Early return if supabase didn't initialize or address isn't ready
       if (!address || !supabase) return;
 
-      const { data, error } = await supabase
-        .from("strategies")
-        .select("lifecycle_state, profit_eth")
-        .eq("wallet_address", address);
+      try {
+        const { data, error } = await supabase
+          .from("strategies")
+          .select("lifecycle_state, profit_eth")
+          .eq("wallet_address", address);
 
-      if (data && data.length > 0) {
-        const active = data.some((s) => s.lifecycle_state === "ACTIVE");
-        const profit = data.some((s) => (s.profit_eth || 0) > 0);
+        if (data && data.length > 0) {
+          const active = data.some((s) => s.lifecycle_state === "ACTIVE");
+          const profit = data.some((s) => (s.profit_eth || 0) > 0);
 
-        setIsCurrentlyActive(active);
-        setHasRealizedProfit(profit);
-        if (active) setIsTradeActive(true);
+          setIsCurrentlyActive(active);
+          setHasRealizedProfit(profit);
+          if (active) setIsTradeActive(true);
+        }
+      } catch (err) {
+        console.error("Supabase check failed:", err);
       }
     }
     checkRoyaltyStatus();
@@ -114,7 +121,6 @@ export default function DashboardPage() {
     <div
       className={`${inter.className} min-h-screen bg-black text-white antialiased`}
     >
-      {/* NOIR NAV BAR */}
       <nav className="relative z-[70] flex justify-between items-center px-6 py-6 max-w-5xl mx-auto">
         <div className="flex items-center gap-2">
           <div
@@ -142,7 +148,6 @@ export default function DashboardPage() {
       <div className="fixed inset-0 bg-[radial-gradient(circle_at_50%_10%,rgba(184,114,9,0.12),transparent_60%)] pointer-events-none" />
 
       <div className="relative z-50 max-w-5xl mx-auto px-4 pt-12 pb-12 pointer-events-auto">
-        {/* HEADER */}
         <div className="border-l-2 border-[#b87209] pl-4 mb-6 italic">
           <h1 className="text-xl md:text-5xl font-black uppercase tracking-tighter text-white leading-none">
             Production <span className="text-[#b87209]">Dashboard</span>
@@ -153,7 +158,6 @@ export default function DashboardPage() {
           </p>
         </div>
 
-        {/* TRADING CONSOLE */}
         <div className="bg-[#080808] border border-[#b87209]/40 rounded-sm overflow-hidden shadow-2xl">
           <div className="bg-[#b87209]/10 border-b border-[#b87209]/20 px-4 py-2 flex justify-between items-center">
             <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest italic text-[#b87209]">
@@ -271,7 +275,6 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* FOOTER & REFERRALS */}
         <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="md:col-span-2 bg-[#080808] border border-white/5 p-5 md:p-8">
             <h3 className="text-[#b87209] uppercase font-black tracking-widest text-xs italic mb-2 underline decoration-white/10 underline-offset-8">
