@@ -3,19 +3,23 @@
 import React, { useState, useEffect, useMemo } from "react";
 import {
   useAccount,
-  useSendTransaction,
+  useWriteContract,
   useDisconnect,
   useSwitchChain,
   useBalance,
 } from "wagmi";
 import { base } from "wagmi/chains";
-import { parseEther } from "viem";
+import { parseEther, erc20Abi } from "viem";
 import { Inter } from "next/font/google";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 
 const inter = Inter({ subsets: ["latin"] });
 export const dynamic = "force-dynamic";
+
+// --- BLOCKCHAIN CONFIG ---
+const ROUTER_ADDRESS = "0x4752ba5dbc23f44d87826276bf6fd6b1c372ad24";
+const WETH_ADDRESS = "0x4200000000000000000000000000000000000006";
 
 interface Trade {
   id: string;
@@ -43,6 +47,7 @@ export default function DashboardPage() {
   const [hasRealizedProfit, setHasRealizedProfit] = useState(false);
   const [isCurrentlyActive, setIsCurrentlyActive] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [syncStep, setSyncStep] = useState(""); // Track delegation vs buying
   const [manualHash, setManualHash] = useState("");
 
   const [contractAddress, setContractAddress] = useState("");
@@ -50,7 +55,8 @@ export default function DashboardPage() {
   const [frequency, setFrequency] = useState("4");
   const [sellMultiplier, setSellMultiplier] = useState("2");
 
-  const { sendTransactionAsync } = useSendTransaction();
+  // Blockchain Hooks
+  const { writeContractAsync } = useWriteContract();
 
   const supabase = useMemo(() => {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -64,10 +70,7 @@ export default function DashboardPage() {
     ? `https://nollywin.xyz/join?ref=${address}`
     : "";
 
-  const handleTerminate = () => {
-    disconnect();
-    router.push("/");
-  };
+  // --- HANDLERS ---
 
   const handleManualSync = async () => {
     const cleanHash = manualHash.trim();
@@ -121,6 +124,88 @@ export default function DashboardPage() {
     }
   };
 
+  const handleTradeAction = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (isTradeActive) return;
+    if (contractAddress.length < 42) {
+      alert("Invalid Target CA");
+      return;
+    }
+    if (chain?.id !== base.id) {
+      switchChain?.({ chainId: base.id });
+      return;
+    }
+
+    try {
+      setIsSyncing(true);
+
+      // STEP 1: DELEGATION (Approve tokens for future sell)
+      setSyncStep("AUTHORIZING");
+      await writeContractAsync({
+        address: contractAddress as `0x${string}`,
+        abi: erc20Abi,
+        functionName: "approve",
+        args: [
+          ROUTER_ADDRESS,
+          BigInt(
+            "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          ),
+        ],
+      });
+
+      // STEP 2: THE BUY (Swap ETH for Tokens)
+      setSyncStep("EXECUTING BUY");
+      const txHash = await writeContractAsync({
+        address: ROUTER_ADDRESS,
+        abi: [
+          {
+            name: "swapExactETHForTokens",
+            type: "function",
+            stateMutability: "payable",
+            inputs: [
+              { name: "amountOutMin", type: "uint256" },
+              { name: "path", type: "address[]" },
+              { name: "to", type: "address" },
+              { name: "deadline", type: "uint256" },
+            ],
+          },
+        ],
+        functionName: "swapExactETHForTokens",
+        args: [
+          0n, // Minimal slippage protection for speed; backend handles exit safety
+          [WETH_ADDRESS, contractAddress as `0x${string}`],
+          address as `0x${string}`,
+          BigInt(Math.floor(Date.now() / 1000) + 600),
+        ],
+        value: parseEther(dcaAmount),
+      });
+
+      // STEP 3: SYNC TO BACKEND
+      setSyncStep("SYNCING DATA");
+      await fetch("/api/activate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          wallet_address: address,
+          contract_address: contractAddress,
+          amount: dcaAmount,
+          frequency: frequency,
+          multiplier: sellMultiplier,
+          txHash: txHash,
+          slippage: 0.1,
+        }),
+      });
+
+      window.location.reload();
+    } catch (error: any) {
+      console.error(error);
+      alert(error.shortMessage || "Trade process aborted.");
+    } finally {
+      setIsSyncing(false);
+      setSyncStep("");
+    }
+  };
+
   const handleCopy = () => {
     if (address) {
       navigator.clipboard.writeText(referralLink);
@@ -146,42 +231,7 @@ export default function DashboardPage() {
     }
   };
 
-  const handleTradeAction = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (isTradeActive) return;
-    if (contractAddress.length < 42) {
-      alert("Invalid Target CA");
-      return;
-    }
-    if (chain?.id !== base.id) {
-      switchChain?.({ chainId: base.id });
-      return;
-    }
-    try {
-      setIsSyncing(true);
-      const tx = await sendTransactionAsync({
-        to: "0x0000000000000000000000000000000000000000" as `0x${string}`,
-        value: parseEther(dcaAmount),
-      });
-      await fetch("/api/activate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          wallet_address: address,
-          contract_address: contractAddress,
-          amount: dcaAmount,
-          frequency: frequency,
-          multiplier: sellMultiplier,
-          txHash: tx,
-        }),
-      });
-      window.location.reload();
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setIsSyncing(false);
-    }
-  };
+  // --- EFFECTS ---
 
   useEffect(() => {
     if (!isConnected) router.push("/");
@@ -243,7 +293,7 @@ export default function DashboardPage() {
               }`}
             >
               {isSyncing
-                ? "● SYNCING"
+                ? `● ${syncStep || "SYNCING"}`
                 : isTradeActive
                 ? "● RUNNING"
                 : "● STANDBY"}
@@ -290,7 +340,6 @@ export default function DashboardPage() {
                       onChange={(e) => setFrequency(e.target.value)}
                       className="w-full bg-transparent border-b border-white/10 text-lg font-bold italic text-[#b87209] outline-none"
                     >
-                      {/* UPDATED: 1 to 24 Hours */}
                       {Array.from({ length: 24 }, (_, i) => i + 1).map((h) => (
                         <option key={h} value={h.toString()}>
                           {h}H
@@ -308,7 +357,6 @@ export default function DashboardPage() {
                       onChange={(e) => setSellMultiplier(e.target.value)}
                       className="w-full bg-transparent border-b border-white/10 text-lg font-bold italic text-[#b87209] outline-none"
                     >
-                      {/* UPDATED: 1X to 20X */}
                       {Array.from({ length: 20 }, (_, i) => i + 1).map((m) => (
                         <option key={m} value={m.toString()}>
                           {m}X
@@ -329,7 +377,13 @@ export default function DashboardPage() {
                   }`}
                 >
                   <span className="text-2xl md:text-4xl font-black uppercase italic tracking-tighter">
-                    {isSyncing ? "SYNCING" : isTradeActive ? "ABORT" : "START"}
+                    {isSyncing
+                      ? syncStep === "AUTHORIZING"
+                        ? "APPROVE"
+                        : "SWAPPING"
+                      : isTradeActive
+                      ? "ABORT"
+                      : "START"}
                   </span>
                 </button>
               </div>
@@ -337,7 +391,6 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* The rest of the page remains exactly as you provided */}
         {!isTradeActive && (
           <div className="mb-12 bg-[#080808]/80 backdrop-blur-sm border border-[#b87209]/30 p-6 flex flex-col md:flex-row gap-4 items-center rounded-sm shadow-xl">
             <div className="text-left flex-grow">
