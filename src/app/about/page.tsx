@@ -32,7 +32,7 @@ export default function AboutPage() {
             Built on the{" "}
             <span className="text-white font-bold">Base network</span>, NollyWin
             is a self-custodial Micro-DCA automation protocol designed for
-            maximum transparency and user protection.
+            maximum profit, transparency, and user protection.
           </p>
           <ul className="space-y-6 pt-4">
             {[
@@ -76,7 +76,7 @@ export default function AboutPage() {
             <span className="underline decoration-white font-black italic">
               1% lifetime incentive
             </span>{" "}
-            on the profits of the actors you bring into the engine.
+            on the profits of the actors and crewmemb you bring into the engine.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-[11px]">
             <div className="space-y-2">
@@ -84,8 +84,9 @@ export default function AboutPage() {
                 Real-Time Eligibility
               </h4>
               <p className="text-gray-500">
-                To earn the 1% share, you must have at least one ACTIVE strategy
-                running at the time of settlement.
+                To earn the 1% share, you must have at least one PROFITABLE life
+                time trade and one ACTIVE strategy running at the time of
+                settlement.
               </p>
             </div>
             <div className="space-y-2">
