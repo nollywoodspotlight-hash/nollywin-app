@@ -6,6 +6,7 @@ import {
   useSendTransaction,
   useDisconnect,
   useSwitchChain,
+  useBalance,
 } from "wagmi";
 import { base } from "wagmi/chains";
 import { parseEther } from "viem";
@@ -20,6 +21,7 @@ export default function DashboardPage() {
   const { address, isConnected, chain } = useAccount();
   const { disconnect } = useDisconnect();
   const { switchChain } = useSwitchChain();
+  const { refetch: refreshBalance } = useBalance({ address });
   const router = useRouter();
 
   // --- STATE ---
@@ -91,6 +93,12 @@ export default function DashboardPage() {
       return;
     }
 
+    // Force network switch on mobile/desktop before transaction
+    if (chain?.id !== base.id) {
+      switchChain?.({ chainId: base.id });
+      return;
+    }
+
     try {
       sendTransaction({
         to: "0x0000000000000000000000000000000000000000" as `0x${string}`,
@@ -110,8 +118,11 @@ export default function DashboardPage() {
       });
 
       if (!response.ok) throw new Error("Database sync failed");
+
+      // Immediate UI update
       setIsTradeActive(true);
       setIsCurrentlyActive(true);
+      refreshBalance();
     } catch (error) {
       console.error("❌ Startup Failed:", error);
     }
@@ -165,7 +176,8 @@ export default function DashboardPage() {
     <div
       className={`${inter.className} min-h-screen bg-black text-white antialiased selection:bg-[#b87209] selection:text-black`}
     >
-      <nav className="relative z-[70] flex justify-between items-center px-6 py-8 max-w-5xl mx-auto">
+      {/* NOIR NAV BAR - High Z-Index for Desktop Visibility */}
+      <nav className="relative z-[100] flex justify-between items-center px-6 py-8 max-w-5xl mx-auto overflow-visible">
         <div className="flex items-center gap-3">
           <div
             className={`w-2 h-2 rounded-full animate-pulse ${
@@ -178,7 +190,7 @@ export default function DashboardPage() {
         </div>
         <button
           onClick={handleTerminate}
-          className="group relative px-6 py-2 border border-[#b87209]/30 hover:border-[#b87209] transition-all duration-500 bg-black"
+          className="group relative z-[110] px-6 py-2 border border-[#b87209]/30 hover:border-[#b87209] transition-all duration-500 bg-black"
         >
           <span className="relative z-10 text-[10px] font-black uppercase italic tracking-widest text-[#b87209] group-hover:text-white">
             [ Terminate Session / {address?.slice(0, 4)}...{address?.slice(-4)}{" "}
@@ -216,9 +228,9 @@ export default function DashboardPage() {
           </div>
 
           <div className="p-6 md:p-12">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 text-left">
               <div className="space-y-8">
-                <div className="text-left">
+                <div>
                   <label className="text-[#b87209] uppercase text-[10px] font-black tracking-widest mb-2 block italic">
                     Target Contract ID (CA)
                   </label>
@@ -232,7 +244,7 @@ export default function DashboardPage() {
                   />
                 </div>
                 <div className="grid grid-cols-3 gap-6 pt-4 border-t border-white/5">
-                  <div className="text-left">
+                  <div>
                     <label className="text-gray-600 uppercase text-[9px] font-black italic block mb-2">
                       Size (ETH)
                     </label>
@@ -245,7 +257,7 @@ export default function DashboardPage() {
                       className="w-full bg-transparent border-b border-white/10 text-xl font-bold italic text-white outline-none disabled:opacity-30"
                     />
                   </div>
-                  <div className="text-left">
+                  <div>
                     <label className="text-gray-600 uppercase text-[9px] font-black italic block mb-2">
                       Interval
                     </label>
@@ -260,7 +272,7 @@ export default function DashboardPage() {
                       <option value="8">8H</option>
                     </select>
                   </div>
-                  <div className="text-left">
+                  <div>
                     <label className="text-gray-600 uppercase text-[9px] font-black italic block mb-2">
                       Exit
                     </label>
@@ -377,8 +389,8 @@ export default function DashboardPage() {
         )}
 
         {/* REFERRALS */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="md:col-span-2 bg-[#080808] border border-white/5 p-10 text-left">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
+          <div className="md:col-span-2 bg-[#080808] border border-white/5 p-10">
             <div className="flex justify-between items-start mb-6">
               <h3 className="text-[#b87209] uppercase font-black tracking-widest text-xs italic underline decoration-white/10 underline-offset-8">
                 Production Crew
