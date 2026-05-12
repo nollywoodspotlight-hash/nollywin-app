@@ -1,18 +1,20 @@
-"use client";
-
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import "@coinbase/onchainkit/styles.css";
 import { Providers } from "./components/providers";
-import Header from "./components/Header"; // UPDATED: Pointing to the new Header logic
+import Header from "./components/Header";
 import Footer from "./components/FooterX";
 
 const inter = Inter({ subsets: ["latin"] });
 
-// Note: Metadata must be in a separate server component if using "use client"
-// or handled via the viewport object below.
+// Server-side Metadata (Vital for SEO and Vercel Build)
+export const metadata: Metadata = {
+  title: "NollyWin | Cinematic DCA on Base",
+  description: "Automated trading with a Nollywood soul. Powered by Base.",
+};
 
+// Vital for Mobile Design Framing
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
@@ -32,17 +34,13 @@ export default function RootLayout({
         className={`${inter.className} bg-black antialiased text-white min-h-screen flex flex-col overflow-x-hidden`}
       >
         <Providers>
-          {/* Replacing <Navbar /> with <Header />. 
-              This ensures the Terminate Session logic and Logo 
-              we built are active globally.
-          */}
+          {/* Your Custom Header with the Terminate Session logic */}
           <Header />
 
-          {/* pt-20 provides the necessary clearance for our fixed 80px header
-              on all views so content isn't hidden behind the nav bar.
-          */}
+          {/* The main content area with proper mobile spacing */}
           <main className="relative flex-grow w-full pt-20">{children}</main>
 
+          {/* Your Branding Footer */}
           <Footer />
         </Providers>
       </body>
