@@ -63,14 +63,10 @@ export default function DashboardPage() {
 
   const handleManualSync = async () => {
     const cleanHash = manualHash.trim();
-    // Ethereum hashes are exactly 66 chars (0x + 64 hex chars)
-    if (!cleanHash.startsWith("0x") || cleanHash.length !== 66) {
-      alert(
-        `Invalid Hash Length: ${cleanHash.length}/66. Please ensure you copied the full hash.`,
-      );
+    if (!cleanHash.startsWith("0x")) {
+      alert("Invalid Format: Hash must start with 0x");
       return;
     }
-
     setIsSyncing(true);
     try {
       const response = await fetch("/api/activate", {
@@ -78,7 +74,8 @@ export default function DashboardPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           wallet_address: address,
-          contract_address: contractAddress || "RECOVERY",
+          contract_address:
+            contractAddress || "0x0000000000000000000000000000000000000000",
           amount: dcaAmount,
           frequency: frequency,
           multiplier: sellMultiplier,
@@ -86,13 +83,13 @@ export default function DashboardPage() {
         }),
       });
       if (response.ok) {
-        alert("Success: Production Linked");
+        alert("PRODUCTION CLAIMED SUCCESSFULLY");
         window.location.reload();
       } else {
-        alert("Sync Failed: Record might already exist in database.");
+        alert("SYNC ERROR: Check Hash or Network Connection");
       }
     } catch (e) {
-      alert("System Offline");
+      alert("Database Timeout");
     } finally {
       setIsSyncing(false);
     }
@@ -107,7 +104,7 @@ export default function DashboardPage() {
   };
 
   const handleAbortTrade = async (trade: any) => {
-    if (!window.confirm("Abort and liquidate to ETH?")) return;
+    if (!window.confirm("Abort production and liquidate?")) return;
     try {
       const res = await fetch("/api/abort", {
         method: "POST",
@@ -200,7 +197,7 @@ export default function DashboardPage() {
     <div
       className={`${inter.className} min-h-screen bg-black text-white antialiased selection:bg-[#b87209] selection:text-black`}
     >
-      {/* NOIR NAV BAR - FIXED TO TOP FOR WEB VISIBILITY */}
+      {/* MASTER TOP NAV - PINNED Z-INDEX 200 */}
       <nav className="fixed top-0 left-0 right-0 z-[200] bg-black/90 backdrop-blur-md border-b border-[#b87209]/10">
         <div className="flex justify-between items-center px-6 py-4 max-w-5xl mx-auto">
           <div className="flex items-center gap-3">
@@ -215,9 +212,9 @@ export default function DashboardPage() {
           </div>
           <button
             onClick={handleTerminate}
-            className="group relative z-[210] px-6 py-2 border border-[#b87209]/30 hover:border-[#b87209] transition-all bg-black cursor-pointer pointer-events-auto"
+            className="px-6 py-2 border border-[#b87209]/40 hover:border-[#b87209] transition-all bg-black cursor-pointer pointer-events-auto"
           >
-            <span className="relative z-10 text-[10px] font-black uppercase italic text-[#b87209] group-hover:text-white transition-colors">
+            <span className="text-[10px] font-black uppercase italic text-[#b87209]">
               [ Terminate Session ]
             </span>
           </button>
@@ -231,12 +228,12 @@ export default function DashboardPage() {
           <h1 className="text-4xl md:text-7xl font-black uppercase tracking-tighter leading-none">
             Production <span className="text-[#b87209]">Dashboard</span>
           </h1>
-          <p className="text-gray-500 uppercase tracking-[0.4em] text-[10px] md:text-xs mt-3 font-bold underline decoration-[#b87209]/20 underline-offset-4">
+          <p className="text-gray-500 uppercase tracking-[0.4em] text-[10px] md:text-xs mt-3 font-bold">
             Authorized Protocol / Base Mainnet / {address?.slice(0, 14)}...
           </p>
         </div>
 
-        {/* TRADING CONSOLE */}
+        {/* SCRIPT EDITOR (TRADE WINDOW) - RESTORED EXACT ORIGINAL CSS */}
         <div className="bg-[#080808] border border-[#b87209]/40 shadow-[0_0_80px_rgba(0,0,0,1)] mb-12">
           <div className="bg-[#b87209]/10 border-b border-[#b87209]/20 px-6 py-3 flex justify-between items-center">
             <span className="text-[10px] font-black uppercase tracking-widest italic text-[#b87209]">
@@ -255,8 +252,8 @@ export default function DashboardPage() {
             </span>
           </div>
 
-          <div className="p-6 md:p-12">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 text-left">
+          <div className="p-6 md:p-12 text-left">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
               <div className="space-y-8">
                 <div>
                   <label className="text-[#b87209] uppercase text-[10px] font-black tracking-widest mb-2 block italic">
@@ -268,13 +265,13 @@ export default function DashboardPage() {
                     value={contractAddress}
                     disabled={isTradeActive}
                     onChange={(e) => setContractAddress(e.target.value)}
-                    className="w-full bg-black border-b-2 border-white/10 py-3 text-xl font-mono text-white outline-none focus:border-[#b87209] transition-colors"
+                    className="w-full bg-black border-b-2 border-white/10 py-3 text-xl font-mono font-bold text-white focus:border-[#b87209] outline-none disabled:opacity-30 transition-colors"
                   />
                 </div>
                 <div className="grid grid-cols-3 gap-6 pt-4 border-t border-white/5">
                   <div>
-                    <label className="text-gray-600 text-[9px] font-black italic block mb-2">
-                      Size
+                    <label className="text-gray-600 uppercase text-[9px] font-black italic block mb-2">
+                      Size (ETH)
                     </label>
                     <input
                       type="number"
@@ -282,35 +279,39 @@ export default function DashboardPage() {
                       value={dcaAmount}
                       disabled={isTradeActive}
                       onChange={(e) => setDcaAmount(e.target.value)}
-                      className="w-full bg-transparent border-b border-white/10 text-xl font-bold italic text-white outline-none"
+                      className="w-full bg-transparent border-b border-white/10 text-xl font-bold italic text-white outline-none disabled:opacity-30"
                     />
                   </div>
                   <div>
-                    <label className="text-gray-600 text-[9px] font-black italic block mb-2">
+                    <label className="text-gray-600 uppercase text-[9px] font-black italic block mb-2">
                       Interval
                     </label>
                     <select
                       value={frequency}
                       disabled={isTradeActive}
                       onChange={(e) => setFrequency(e.target.value)}
-                      className="w-full bg-transparent border-b border-white/10 text-lg font-bold italic text-[#b87209] outline-none"
+                      className="w-full bg-transparent border-b border-white/10 text-lg font-bold italic text-[#b87209] outline-none disabled:opacity-30"
                     >
                       <option value="1">1H</option>
                       <option value="4">4H</option>
+                      <option value="8">8H</option>
                     </select>
                   </div>
                   <div>
-                    <label className="text-gray-600 text-[9px] font-black italic block mb-2">
+                    <label className="text-gray-600 uppercase text-[9px] font-black italic block mb-2">
                       Exit
                     </label>
                     <select
                       value={sellMultiplier}
                       disabled={isTradeActive}
                       onChange={(e) => setSellMultiplier(e.target.value)}
-                      className="w-full bg-transparent border-b border-white/10 text-lg font-bold italic text-[#b87209] outline-none"
+                      className="w-full bg-transparent border-b border-white/10 text-lg font-bold italic text-[#b87209] outline-none disabled:opacity-30"
                     >
+                      <option value="1">1X</option>
                       <option value="2">2X</option>
+                      <option value="3">3X</option>
                       <option value="5">5X</option>
+                      <option value="10">10X</option>
                     </select>
                   </div>
                 </div>
@@ -319,14 +320,14 @@ export default function DashboardPage() {
                 <button
                   onClick={handleTradeAction}
                   disabled={isSyncing}
-                  className={`w-full h-32 md:h-64 border-4 transition-all duration-300 active:scale-95 ${
+                  className={`w-full h-32 md:h-64 border-4 transition-all duration-500 active:scale-95 ${
                     isTradeActive
                       ? "border-red-600 bg-red-600/5 text-red-600"
                       : "border-[#b87209] bg-transparent text-[#b87209] hover:bg-[#b87209] hover:text-black shadow-[0_0_30px_rgba(184,114,9,0.1)]"
                   }`}
                 >
                   <span className="text-2xl md:text-4xl font-black uppercase italic tracking-tighter">
-                    {isSyncing ? "SYNC..." : isTradeActive ? "ABORT" : "START"}
+                    {isSyncing ? "SYNCING" : isTradeActive ? "ABORT" : "START"}
                   </span>
                 </button>
               </div>
@@ -334,7 +335,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* PROTOCOL RECOVERY */}
+        {/* PROTOCOL RECOVERY TOOL */}
         {!isTradeActive && (
           <div className="mb-12 bg-[#080808]/50 border border-[#b87209]/20 p-6 flex flex-col md:flex-row gap-4 items-center">
             <div className="text-left flex-grow">
@@ -342,7 +343,7 @@ export default function DashboardPage() {
                 Protocol Recovery
               </h4>
               <p className="text-gray-600 text-[8px] uppercase font-bold italic mt-1">
-                Paste full Hash if trade didn&apos;t appear after transaction
+                Paste Hash to claim trade if it didn&apos;t appear
               </p>
             </div>
             <input
@@ -403,7 +404,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* MODAL */}
+        {/* INTEL MODAL */}
         {selectedTrade && (
           <div className="fixed inset-0 z-[300] flex items-center justify-center p-6 bg-black/95 backdrop-blur-md">
             <div className="w-full max-w-2xl bg-[#080808] border-2 border-[#b87209] shadow-[0_0_100px_rgba(184,114,9,0.15)]">
@@ -413,9 +414,9 @@ export default function DashboardPage() {
                 </h3>
                 <button
                   onClick={() => setSelectedTrade(null)}
-                  className="text-black font-black hover:rotate-90 transition-transform"
+                  className="text-black font-black"
                 >
-                  CLOSE [X]
+                  [X]
                 </button>
               </div>
               <div className="p-10 space-y-10 text-left">
