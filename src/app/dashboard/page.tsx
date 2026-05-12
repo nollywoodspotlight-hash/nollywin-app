@@ -22,36 +22,24 @@ export default function DashboardPage() {
   const { switchChain } = useSwitchChain();
   const router = useRouter();
 
-  // Dashboard Data States
+  // --- STATE ---
   const [trades, setTrades] = useState<any[]>([]);
   const [selectedTrade, setSelectedTrade] = useState<any>(null);
   const [referralCount, setReferralCount] = useState(0);
   const [isTradeActive, setIsTradeActive] = useState(false);
   const [copied, setCopied] = useState(false);
-
-  // Royalty Eligibility States
   const [hasRealizedProfit, setHasRealizedProfit] = useState(false);
   const [isCurrentlyActive, setIsCurrentlyActive] = useState(false);
 
-  const { sendTransaction } = useSendTransaction();
-
+  // Form Inputs
   const [contractAddress, setContractAddress] = useState("");
   const [dcaAmount, setDcaAmount] = useState("0.01");
   const [frequency, setFrequency] = useState("4");
   const [sellMultiplier, setSellMultiplier] = useState("2");
-  const [stallCount] = useState(0);
 
-  // 1. NETWORK & SECURITY GUARD
-  useEffect(() => {
-    if (!isConnected) {
-      router.push("/");
-    }
-    // Force switch to Base if on wrong network
-    if (isConnected && chain?.id !== base.id) {
-      switchChain({ chainId: base.id });
-    }
-  }, [isConnected, chain, router, switchChain]);
+  const { sendTransaction } = useSendTransaction();
 
+  // --- UTILS ---
   const supabase = useMemo(() => {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -59,39 +47,109 @@ export default function DashboardPage() {
     return createClient(url, key);
   }, []);
 
-  // 2. DATA SYNC: Fetch Status, Live Feed, and Referral Headcount
+  // --- HANDLERS ---
+  const handleTerminate = () => {
+    disconnect();
+    router.push("/");
+  };
+
+  const handleCopy = () => {
+    const link = `https://nollywin.xyz/join?ref=${address}`;
+    if (address) {
+      navigator.clipboard.writeText(link);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const handleAbortTrade = async (trade: any) => {
+    if (!window.confirm("Abort and liquidate to ETH?")) return;
+    try {
+      const res = await fetch("/api/abort", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tradeId: trade.id, wallet_address: address }),
+      });
+      if (res.ok) {
+        setSelectedTrade(null);
+        window.location.reload();
+      }
+    } catch (e) {
+      console.error("Abort Failed", e);
+    }
+  };
+
+  const handleTradeAction = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (isTradeActive) {
+      setIsTradeActive(false);
+      return;
+    }
+
+    if (contractAddress.length < 42) {
+      alert("Invalid Base Contract Address");
+      return;
+    }
+
+    try {
+      sendTransaction({
+        to: "0x0000000000000000000000000000000000000000" as `0x${string}`,
+        value: parseEther(dcaAmount),
+      });
+
+      const response = await fetch("/api/activate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          wallet_address: address,
+          contract_address: contractAddress,
+          amount: dcaAmount,
+          frequency: frequency,
+          multiplier: sellMultiplier,
+        }),
+      });
+
+      if (!response.ok) throw new Error("Database sync failed");
+      setIsTradeActive(true);
+      setIsCurrentlyActive(true);
+    } catch (error) {
+      console.error("❌ Startup Failed:", error);
+    }
+  };
+
+  // --- EFFECTS ---
+  useEffect(() => {
+    if (!isConnected) {
+      router.push("/");
+    }
+    if (isConnected && chain?.id !== base.id) {
+      switchChain?.({ chainId: base.id });
+    }
+  }, [isConnected, chain, router, switchChain]);
+
   useEffect(() => {
     async function syncDashboard() {
       if (!address || !supabase) return;
+      const { data } = await supabase
+        .from("strategies")
+        .select("*")
+        .eq("wallet_address", address)
+        .order("created_at", { ascending: false });
 
-      try {
-        // Fetch All Trades
-        const { data: tradeData } = await supabase
-          .from("strategies")
-          .select("*")
-          .eq("wallet_address", address)
-          .order("created_at", { ascending: false });
+      const { count } = await supabase
+        .from("users")
+        .select("*", { count: "exact", head: true })
+        .eq("referred_by", address);
 
-        // Fetch Production Crew (Referrals)
-        const { count: crewCount } = await supabase
-          .from("users")
-          .select("*", { count: "exact", head: true })
-          .eq("referred_by", address);
-
-        if (tradeData) {
-          setTrades(tradeData);
-          const active = tradeData.some((s) => s.lifecycle_state === "ACTIVE");
-          const profit = tradeData.some((s) => (s.profit_eth || 0) > 0);
-
-          setIsCurrentlyActive(active);
-          setHasRealizedProfit(profit);
-          if (active) setIsTradeActive(true);
-        }
-
-        if (crewCount !== null) setReferralCount(crewCount);
-      } catch (err) {
-        console.error("Dashboard sync error:", err);
+      if (data) {
+        setTrades(data);
+        const active = data.some((s) => s.lifecycle_state === "ACTIVE");
+        const profit = data.some((s) => (s.profit_eth || 0) > 0);
+        setIsCurrentlyActive(active);
+        setHasRealizedProfit(profit);
+        if (active) setIsTradeActive(true);
       }
+      if (count !== null) setReferralCount(count);
     }
     syncDashboard();
   }, [address, supabase]);
@@ -99,90 +157,16 @@ export default function DashboardPage() {
   const royaltiesEnabled = isCurrentlyActive && hasRealizedProfit;
   const referralLink = address
     ? `https://nollywin.xyz/join?ref=${address}`
-    : "Connect Wallet";
+    : "";
 
-  const handleAbortTrade = async (trade: any) => {
-    const confirmAbort = window.confirm(
-      "CRITICAL: Abort production and liquidate to ETH immediately?",
-    );
-    if (!confirmAbort) return;
-
-    try {
-      const response = await fetch("/api/abort", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tradeId: trade.id, wallet_address: address }),
-      });
-
-      if (response.ok) {
-        setSelectedTrade(null);
-        window.location.reload();
-      }
-    } catch (error) {
-      alert("Abort failed. System remains online.");
-    }
-  };
-
-  const handleTradeAction = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (!isTradeActive) {
-      if (contractAddress.length < 42) {
-        alert("Invalid Base Contract Address");
-        return;
-      }
-      try {
-        sendTransaction({
-          to: "0x0000000000000000000000000000000000000000" as `0x${string}`,
-          value: parseEther(dcaAmount),
-        });
-
-        const response = await fetch("/api/activate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            wallet_address: address,
-            contract_address: contractAddress,
-            amount: dcaAmount,
-            frequency: frequency,
-            multiplier: sellMultiplier,
-          }),
-        });
-
-        if (!response.ok) throw new Error("Database sync failed");
-        setIsTradeActive(true);
-        setIsCurrentlyActive(true);
-      } catch (error) {
-        console.error("❌ Startup Failed:", error);
-      }
-    } else {
-      setIsTradeActive(false);
-    }
-  };
-
-  const handleCopy = () => {
-    if (address) {
-      navigator.clipboard.writeText(referralLink);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
-
-  if (!isConnected) {
-    return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="animate-pulse text-[#b87209] font-black uppercase italic tracking-[0.3em] text-xs">
-          ACCESS DENIED // REDIRECTING...
-        </div>
-      </div>
-    );
-  }
+  if (!isConnected) return null;
 
   return (
     <div
-      className={`${inter.className} min-h-screen bg-black text-white antialiased`}
+      className={`${inter.className} min-h-screen bg-black text-white antialiased selection:bg-[#b87209] selection:text-black`}
     >
-      <nav className="relative z-[70] flex justify-between items-center px-6 py-6 max-w-5xl mx-auto">
-        <div className="flex items-center gap-2">
+      <nav className="relative z-[70] flex justify-between items-center px-6 py-8 max-w-5xl mx-auto">
+        <div className="flex items-center gap-3">
           <div
             className={`w-2 h-2 rounded-full animate-pulse ${
               isCurrentlyActive ? "bg-green-500" : "bg-[#b87209]"
@@ -192,40 +176,38 @@ export default function DashboardPage() {
             {isCurrentlyActive ? "Strategy Online" : "System Standby"}
           </span>
         </div>
-
         <button
-          onClick={() => disconnect()}
-          className="group relative px-4 py-1 border border-[#b87209]/30 hover:border-[#b87209] transition-all duration-300"
+          onClick={handleTerminate}
+          className="group relative px-6 py-2 border border-[#b87209]/30 hover:border-[#b87209] transition-all duration-500 bg-black"
         >
-          <div className="absolute inset-0 bg-[#b87209]/5 group-hover:bg-[#b87209]/10 transition-colors" />
-          <span className="relative text-[9px] font-black uppercase italic tracking-widest text-[#b87209]">
+          <span className="relative z-10 text-[10px] font-black uppercase italic tracking-widest text-[#b87209] group-hover:text-white">
             [ Terminate Session / {address?.slice(0, 4)}...{address?.slice(-4)}{" "}
             ]
           </span>
+          <div className="absolute inset-0 bg-[#b87209] scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-500 opacity-10" />
         </button>
       </nav>
 
-      <div className="fixed inset-0 bg-[radial-gradient(circle_at_50%_10%,rgba(184,114,9,0.12),transparent_60%)] pointer-events-none" />
+      <div className="fixed inset-0 bg-[radial-gradient(circle_at_50%_10%,rgba(184,114,9,0.15),transparent_60%)] pointer-events-none" />
 
-      <div className="relative z-50 max-w-5xl mx-auto px-4 pt-12 pb-12 pointer-events-auto">
-        <div className="border-l-2 border-[#b87209] pl-4 mb-6 italic text-left">
-          <h1 className="text-xl md:text-5xl font-black uppercase tracking-tighter text-white leading-none">
+      <div className="relative z-50 max-w-5xl mx-auto px-4 pb-20">
+        <div className="border-l-4 border-[#b87209] pl-6 mb-12 italic text-left">
+          <h1 className="text-4xl md:text-7xl font-black uppercase tracking-tighter text-white leading-none">
             Production <span className="text-[#b87209]">Dashboard</span>
           </h1>
-          <p className="text-gray-500 uppercase tracking-widest text-[8px] md:text-xs mt-1 font-bold">
+          <p className="text-gray-500 uppercase tracking-[0.4em] text-[10px] md:text-xs mt-3 font-bold">
             Authorized Protocol / Base Mainnet /{" "}
-            {address ? address.slice(0, 10) : "STANDBY"}
+            {address ? address.slice(0, 14) : "STANDBY"}...
           </p>
         </div>
 
-        {/* TRADING CONSOLE */}
-        <div className="bg-[#080808] border border-[#b87209]/40 rounded-sm overflow-hidden shadow-2xl">
-          <div className="bg-[#b87209]/10 border-b border-[#b87209]/20 px-4 py-2 flex justify-between items-center">
-            <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest italic text-[#b87209]">
+        <div className="bg-[#080808] border border-[#b87209]/40 shadow-[0_0_80px_rgba(0,0,0,1)] mb-12">
+          <div className="bg-[#b87209]/10 border-b border-[#b87209]/20 px-6 py-3 flex justify-between items-center">
+            <span className="text-[10px] font-black uppercase tracking-widest italic text-[#b87209]">
               Script Editor
             </span>
             <span
-              className={`text-[8px] md:text-[10px] font-black uppercase italic ${
+              className={`text-[10px] font-black uppercase italic ${
                 isTradeActive ? "text-green-500" : "text-red-500"
               }`}
             >
@@ -233,11 +215,11 @@ export default function DashboardPage() {
             </span>
           </div>
 
-          <div className="p-4 md:p-10">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-              <div className="space-y-6">
-                <div>
-                  <label className="text-[#b87209] uppercase text-[8px] md:text-[10px] font-black tracking-widest mb-1 block italic text-left">
+          <div className="p-6 md:p-12">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+              <div className="space-y-8">
+                <div className="text-left">
+                  <label className="text-[#b87209] uppercase text-[10px] font-black tracking-widest mb-2 block italic">
                     Target Contract ID (CA)
                   </label>
                   <input
@@ -246,13 +228,13 @@ export default function DashboardPage() {
                     value={contractAddress}
                     disabled={isTradeActive}
                     onChange={(e) => setContractAddress(e.target.value)}
-                    className="w-full bg-black border-b-2 border-white/10 py-2 text-sm md:text-xl font-mono font-bold text-white focus:border-[#b87209] outline-none disabled:opacity-40"
+                    className="w-full bg-black border-b-2 border-white/10 py-3 text-xl font-mono font-bold text-white focus:border-[#b87209] outline-none disabled:opacity-30 transition-colors"
                   />
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-white/5 pt-4">
-                  <div>
-                    <label className="text-gray-600 uppercase text-[7px] md:text-[9px] font-black italic block mb-1 text-left">
-                      DCA Size (ETH)
+                <div className="grid grid-cols-3 gap-6 pt-4 border-t border-white/5">
+                  <div className="text-left">
+                    <label className="text-gray-600 uppercase text-[9px] font-black italic block mb-2">
+                      Size (ETH)
                     </label>
                     <input
                       type="number"
@@ -260,37 +242,37 @@ export default function DashboardPage() {
                       value={dcaAmount}
                       disabled={isTradeActive}
                       onChange={(e) => setDcaAmount(e.target.value)}
-                      className="w-full bg-transparent border-b border-white/10 text-lg font-bold italic text-white outline-none disabled:opacity-40"
+                      className="w-full bg-transparent border-b border-white/10 text-xl font-bold italic text-white outline-none disabled:opacity-30"
                     />
                   </div>
-                  <div>
-                    <label className="text-gray-600 uppercase text-[7px] md:text-[9px] font-black italic block mb-1 text-left">
-                      Frequency
+                  <div className="text-left">
+                    <label className="text-gray-600 uppercase text-[9px] font-black italic block mb-2">
+                      Interval
                     </label>
                     <select
                       value={frequency}
                       disabled={isTradeActive}
                       onChange={(e) => setFrequency(e.target.value)}
-                      className="w-full bg-transparent border-b border-white/10 text-lg font-bold italic text-[#b87209] outline-none disabled:opacity-40 cursor-pointer"
+                      className="w-full bg-transparent border-b border-white/10 text-lg font-bold italic text-[#b87209] outline-none disabled:opacity-30"
                     >
-                      <option value="1">1 Hour</option>
-                      <option value="4">4 Hours</option>
-                      <option value="8">8 Hours</option>
+                      <option value="1">1H</option>
+                      <option value="4">4H</option>
+                      <option value="8">8H</option>
                     </select>
                   </div>
-                  <div>
-                    <label className="text-gray-600 uppercase text-[7px] md:text-[9px] font-black italic block mb-1 text-left">
-                      Sell Option
+                  <div className="text-left">
+                    <label className="text-gray-600 uppercase text-[9px] font-black italic block mb-2">
+                      Exit
                     </label>
                     <select
                       value={sellMultiplier}
                       disabled={isTradeActive}
                       onChange={(e) => setSellMultiplier(e.target.value)}
-                      className="w-full bg-transparent border-b border-white/10 text-lg font-bold italic text-[#b87209] outline-none disabled:opacity-40 cursor-pointer"
+                      className="w-full bg-transparent border-b border-white/10 text-lg font-bold italic text-[#b87209] outline-none disabled:opacity-30"
                     >
-                      {[1, 2, 3, 4, 5, 10, 12].map((x) => (
+                      {[1, 2, 3, 5, 10].map((x) => (
                         <option key={x} value={x}>
-                          {x}X Profit
+                          {x}X
                         </option>
                       ))}
                     </select>
@@ -298,17 +280,17 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              <div className="flex flex-col items-center justify-center pt-2 lg:pt-0 lg:border-l lg:border-white/5 lg:pl-12">
+              <div className="flex flex-col items-center justify-center lg:border-l lg:border-white/5 lg:pl-12">
                 <button
                   onClick={handleTradeAction}
-                  className={`w-full max-w-[320px] h-20 md:h-64 flex flex-col items-center justify-center border-2 md:border-4 transition-all duration-300 active:scale-95 z-[60] ${
+                  className={`w-full h-32 md:h-64 border-4 transition-all duration-500 active:scale-95 ${
                     isTradeActive
-                      ? "border-red-600 bg-red-600/10 text-red-600"
-                      : "border-[#b87209] bg-transparent text-[#b87209] hover:bg-[#b87209] hover:text-black"
+                      ? "border-red-600 bg-red-600/5 text-red-600"
+                      : "border-[#b87209] bg-transparent text-[#b87209] hover:bg-[#b87209] hover:text-black shadow-[0_0_30px_rgba(184,114,9,0.1)]"
                   }`}
                 >
-                  <span className="text-lg md:text-3xl font-black uppercase italic tracking-tighter">
-                    {isTradeActive ? "Manual Override" : "Start Production"}
+                  <span className="text-2xl md:text-4xl font-black uppercase italic tracking-tighter">
+                    {isTradeActive ? "ABORT" : "START"}
                   </span>
                 </button>
               </div>
@@ -316,143 +298,131 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* LIVE PRODUCTION FEED */}
-        <div className="mt-12 space-y-4">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="h-[1px] flex-grow bg-gradient-to-r from-transparent via-[#b87209]/40 to-transparent" />
-            <h2 className="text-[#b87209] font-black uppercase italic tracking-[0.3em] text-xs whitespace-nowrap">
-              Live Production Feed
+        {/* LIVE FEED */}
+        <div className="mb-12">
+          <div className="flex items-center gap-4 mb-8">
+            <h2 className="text-[#b87209] font-black uppercase italic tracking-[0.4em] text-xs">
+              Live Feed
             </h2>
-            <div className="h-[1px] flex-grow bg-gradient-to-r from-[#b87209]/40 via-transparent to-transparent" />
+            <div className="h-[1px] flex-grow bg-white/5" />
           </div>
-          <div className="grid grid-cols-1 gap-2">
-            {trades.filter((t) => t.lifecycle_state === "ACTIVE").length ===
-            0 ? (
-              <p className="text-center text-gray-700 font-black uppercase italic text-[10px] tracking-widest py-12 border border-dashed border-white/5">
-                No active scripts in production.
-              </p>
-            ) : (
-              trades
-                .filter((t) => t.lifecycle_state === "ACTIVE")
-                .map((trade) => (
-                  <button
-                    key={trade.id}
-                    onClick={() => setSelectedTrade(trade)}
-                    className="group flex justify-between items-center bg-[#080808] border border-white/5 hover:border-[#b87209]/50 p-4 transition-all duration-300"
-                  >
-                    <div className="flex items-center gap-6 text-left">
-                      <span className="text-[#b87209] font-black italic text-xs tracking-tighter">
-                        /{trade.id.toString().padStart(3, "0")}
-                      </span>
-                      <div>
-                        <p className="text-white font-bold uppercase text-[10px] tracking-widest leading-none text-left">
-                          Target: {trade.target_contract_address.slice(0, 10)}
-                          ...
-                        </p>
-                        <p className="text-gray-500 text-[8px] uppercase mt-1 italic font-black text-left font-mono">
-                          Size: {trade.dca_amount_eth} ETH
-                        </p>
-                      </div>
-                    </div>
-                    <span className="text-[9px] font-black italic text-[#b87209] group-hover:animate-pulse">
-                      [ VIEW INTEL ]
-                    </span>
-                  </button>
-                ))
-            )}
+          <div className="space-y-3">
+            {trades
+              .filter((t) => t.lifecycle_state === "ACTIVE")
+              .map((trade) => (
+                <button
+                  key={trade.id}
+                  onClick={() => setSelectedTrade(trade)}
+                  className="w-full flex justify-between items-center bg-[#080808] border border-white/5 hover:border-[#b87209]/50 p-6 transition-all group"
+                >
+                  <div className="text-left">
+                    <p className="text-white font-bold uppercase text-xs tracking-widest leading-none">
+                      Target: {trade.target_contract_address.slice(0, 12)}...
+                    </p>
+                    <p className="text-gray-600 text-[10px] uppercase mt-1 italic font-black font-mono">
+                      DCA: {trade.dca_amount_eth} ETH
+                    </p>
+                  </div>
+                  <span className="text-[10px] font-black italic text-[#b87209] group-hover:tracking-[0.2em] transition-all underline decoration-[#b87209]/20">
+                    [ VIEW INTEL ]
+                  </span>
+                </button>
+              ))}
           </div>
         </div>
 
-        {/* MISSION BRIEFING MODAL */}
+        {/* MODAL */}
         {selectedTrade && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm">
-            <div className="w-full max-w-xl bg-[#080808] border-2 border-[#b87209] shadow-[0_0_50px_rgba(184,114,9,0.2)]">
-              <div className="bg-[#b87209] px-6 py-3 flex justify-between items-center text-left">
-                <h3 className="text-black font-black uppercase italic tracking-tighter text-lg">
-                  Mission Briefing: {selectedTrade.id}
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/95 backdrop-blur-md">
+            <div className="w-full max-w-2xl bg-[#080808] border-2 border-[#b87209] shadow-[0_0_100px_rgba(184,114,9,0.15)]">
+              <div className="bg-[#b87209] px-8 py-4 flex justify-between items-center text-left">
+                <h3 className="text-black font-black uppercase italic text-xl tracking-tighter">
+                  Intel: {selectedTrade.id}
                 </h3>
                 <button
                   onClick={() => setSelectedTrade(null)}
-                  className="text-black font-black hover:scale-125 transition-transform"
+                  className="text-black font-black hover:rotate-90 transition-transform"
                 >
-                  [X]
+                  CLOSE [X]
                 </button>
               </div>
-              <div className="p-8 space-y-8 text-left">
-                <div className="grid grid-cols-2 gap-6 border-b border-white/5 pb-8">
+              <div className="p-10 space-y-10 text-left">
+                <div className="grid grid-cols-2 gap-10 border-b border-white/5 pb-10">
                   <div>
-                    <p className="text-[#b87209] text-[9px] uppercase font-black italic mb-1">
-                      Contract ID
+                    <p className="text-[#b87209] text-[10px] uppercase font-black italic mb-2 tracking-widest">
+                      Contract
                     </p>
                     <p className="text-white text-xs truncate font-mono">
                       {selectedTrade.target_contract_address}
                     </p>
                   </div>
                   <div>
-                    <p className="text-[#b87209] text-[9px] uppercase font-black italic mb-1">
-                      Production State
+                    <p className="text-[#b87209] text-[10px] uppercase font-black italic mb-2 tracking-widest">
+                      Status
                     </p>
                     <p className="text-white text-xs uppercase font-black italic">
-                      Active Strategy
+                      In Production
                     </p>
                   </div>
                 </div>
                 <button
                   onClick={() => handleAbortTrade(selectedTrade)}
-                  className="w-full py-6 bg-red-600 hover:bg-red-700 text-white font-black uppercase italic text-xl tracking-tighter shadow-2xl transition-all active:scale-95"
+                  className="w-full py-8 bg-red-600 hover:bg-red-700 text-white font-black uppercase italic text-2xl tracking-tighter transition-all"
                 >
-                  ABORT & LIQUIDATE TO ETH
+                  ABORT PRODUCTION
                 </button>
               </div>
             </div>
           </div>
         )}
 
-        {/* FOOTER & REFERRALS */}
-        <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="md:col-span-2 bg-[#080808] border border-white/5 p-5 md:p-8 text-left">
-            <div className="flex justify-between items-start mb-4">
+        {/* REFERRALS */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="md:col-span-2 bg-[#080808] border border-white/5 p-10 text-left">
+            <div className="flex justify-between items-start mb-6">
               <h3 className="text-[#b87209] uppercase font-black tracking-widest text-xs italic underline decoration-white/10 underline-offset-8">
-                Founder&apos;s Cut: Production Crew
+                Production Crew
               </h3>
               <div className="text-right">
                 <p className="text-[#b87209] font-black italic text-[10px] uppercase">
-                  Crew Size
+                  Headcount
                 </p>
-                <p className="text-white font-black text-xl leading-none italic">
+                <p className="text-white font-black text-3xl italic leading-none">
                   {referralCount}
                 </p>
               </div>
             </div>
             <div className="flex border border-[#b87209]/40 mt-4">
-              <div className="flex-grow bg-black p-4 font-mono text-[8px] text-[#b87209] truncate italic select-all">
+              <div className="flex-grow bg-black p-5 font-mono text-[10px] text-[#b87209] truncate italic select-all">
                 {referralLink}
               </div>
               <button
                 onClick={handleCopy}
-                className="bg-[#b87209] hover:bg-white text-black px-6 font-black uppercase text-[9px] italic transition-colors"
+                className="bg-[#b87209] hover:bg-white text-black px-8 font-black uppercase text-[10px] italic transition-colors"
               >
                 {copied ? "COPIED" : "COPY"}
               </button>
             </div>
           </div>
           <div
-            className={`border p-6 flex flex-col justify-center text-center transition-all duration-500 ${
+            className={`border-2 p-8 flex flex-col justify-center text-center ${
               royaltiesEnabled
-                ? "bg-[#b87209]/10 border-[#b87209]"
-                : "bg-red-950/20 border-red-900/50"
+                ? "bg-[#b87209]/5 border-[#b87209]"
+                : "bg-red-950/10 border-red-900/40"
             }`}
           >
             <p
-              className={`text-[7px] md:text-[10px] font-black uppercase italic leading-loose tracking-widest ${
+              className={`text-[11px] font-black uppercase italic leading-relaxed tracking-widest ${
                 royaltiesEnabled ? "text-[#b87209]" : "text-red-600"
               }`}
             >
-              1% Founders Royalties {royaltiesEnabled ? "Active" : "Inactive"}
+              Founders Cut {royaltiesEnabled ? "Active" : "Inactive"}
               <br />
-              {!royaltiesEnabled
-                ? "LOCKED // REQUIRE PROFIT"
-                : "AUTHORIZED // REWARDS ENABLED"}
+              <span className="text-[8px] opacity-60 mt-2 block tracking-normal italic uppercase">
+                {royaltiesEnabled
+                  ? "REWARDS ENABLED"
+                  : "ACTIVE TRADE + PROFIT REQ."}
+              </span>
             </p>
           </div>
         </div>
