@@ -17,7 +17,6 @@ import { createClient } from "@supabase/supabase-js";
 const inter = Inter({ subsets: ["latin"] });
 export const dynamic = "force-dynamic";
 
-// Define a simple interface to stop the "any" type errors
 interface Trade {
   id: string;
   wallet_address: string;
@@ -46,7 +45,6 @@ export default function DashboardPage() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [manualHash, setManualHash] = useState("");
 
-  // Form Inputs
   const [contractAddress, setContractAddress] = useState("");
   const [dcaAmount, setDcaAmount] = useState("0.01");
   const [frequency, setFrequency] = useState("4");
@@ -66,7 +64,6 @@ export default function DashboardPage() {
     ? `https://nollywin.xyz/join?ref=${address}`
     : "";
 
-  // --- HANDLERS ---
   const handleTerminate = () => {
     disconnect();
     router.push("/");
@@ -78,14 +75,12 @@ export default function DashboardPage() {
       alert("Please paste a valid transaction hash.");
       return;
     }
-
     setIsSyncing(true);
     try {
       const recoveryCA =
         contractAddress.length >= 42
           ? contractAddress
           : "0x0000000000000000000000000000000000000000";
-
       const response = await fetch("/api/activate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -99,13 +94,11 @@ export default function DashboardPage() {
           isManualSync: true,
         }),
       });
-
       if (response.ok) {
         alert("SUCCESS: Trade discovered and linked.");
         window.location.reload();
       } else {
         if (!supabase) throw new Error("Database client not initialized");
-
         const { error: dbError } = await supabase.from("strategies").insert([
           {
             wallet_address: address,
@@ -117,7 +110,6 @@ export default function DashboardPage() {
             lifecycle_state: "ACTIVE",
           },
         ]);
-
         if (dbError) throw dbError;
         alert("FORCE SYNC SUCCESS: Trade added directly to feed.");
         window.location.reload();
@@ -165,14 +157,12 @@ export default function DashboardPage() {
       switchChain?.({ chainId: base.id });
       return;
     }
-
     try {
       setIsSyncing(true);
       const tx = await sendTransactionAsync({
         to: "0x0000000000000000000000000000000000000000" as `0x${string}`,
         value: parseEther(dcaAmount),
       });
-
       await fetch("/api/activate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -185,7 +175,6 @@ export default function DashboardPage() {
           txHash: tx,
         }),
       });
-
       window.location.reload();
     } catch (error) {
       console.error(error);
@@ -203,22 +192,17 @@ export default function DashboardPage() {
   useEffect(() => {
     async function syncDashboard() {
       if (!address || !supabase) return;
-
-      // FIXED: Removed the duplicate .from("strategies") call here
       const { data } = await supabase
         .from("strategies")
         .select("*")
         .eq("wallet_address", address)
         .order("created_at", { ascending: false });
-
       const { count } = await supabase
         .from("users")
         .select("*", { count: "exact", head: true })
         .eq("referred_by", address);
-
       if (data) {
         setTrades(data as Trade[]);
-        // FIXED: Added types to 's' to stop implicit any errors
         const active = data.some((s: Trade) => s.lifecycle_state === "ACTIVE");
         const profit = data.some((s: Trade) => (s.profit_eth || 0) > 0);
         setIsCurrentlyActive(active);
@@ -239,7 +223,6 @@ export default function DashboardPage() {
       <div className="fixed inset-0 bg-[radial-gradient(circle_at_50%_10%,rgba(184,114,9,0.1),transparent_60%)] pointer-events-none z-[1]" />
 
       <div className="relative z-50 max-w-5xl mx-auto px-4 pt-32 pb-20">
-        {/* Header Section */}
         <div className="border-l-4 border-[#b87209] pl-6 mb-12 italic text-left">
           <h1 className="text-4xl md:text-7xl font-black uppercase tracking-tighter leading-none">
             Production <span className="text-[#b87209]">Dashboard</span>
@@ -249,7 +232,6 @@ export default function DashboardPage() {
           </p>
         </div>
 
-        {/* Main Control Panel */}
         <div className="bg-[#080808]/90 backdrop-blur-sm border border-[#b87209]/40 shadow-2xl mb-12">
           <div className="bg-[#b87209]/10 border-b border-[#b87209]/20 px-6 py-3 flex justify-between items-center">
             <span className="text-[10px] font-black uppercase tracking-widest italic text-[#b87209]">
@@ -308,8 +290,12 @@ export default function DashboardPage() {
                       onChange={(e) => setFrequency(e.target.value)}
                       className="w-full bg-transparent border-b border-white/10 text-lg font-bold italic text-[#b87209] outline-none"
                     >
-                      <option value="1">1H</option>
-                      <option value="4">4H</option>
+                      {/* UPDATED: 1 to 24 Hours */}
+                      {Array.from({ length: 24 }, (_, i) => i + 1).map((h) => (
+                        <option key={h} value={h.toString()}>
+                          {h}H
+                        </option>
+                      ))}
                     </select>
                   </div>
                   <div>
@@ -322,8 +308,12 @@ export default function DashboardPage() {
                       onChange={(e) => setSellMultiplier(e.target.value)}
                       className="w-full bg-transparent border-b border-white/10 text-lg font-bold italic text-[#b87209] outline-none"
                     >
-                      <option value="2">2X</option>
-                      <option value="5">5X</option>
+                      {/* UPDATED: 1X to 20X */}
+                      {Array.from({ length: 20 }, (_, i) => i + 1).map((m) => (
+                        <option key={m} value={m.toString()}>
+                          {m}X
+                        </option>
+                      ))}
                     </select>
                   </div>
                 </div>
@@ -347,7 +337,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Protocol Recovery */}
+        {/* The rest of the page remains exactly as you provided */}
         {!isTradeActive && (
           <div className="mb-12 bg-[#080808]/80 backdrop-blur-sm border border-[#b87209]/30 p-6 flex flex-col md:flex-row gap-4 items-center rounded-sm shadow-xl">
             <div className="text-left flex-grow">
@@ -374,7 +364,6 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Trade Feed */}
         <div className="mb-12">
           <div className="flex items-center gap-4 mb-8">
             <h2 className="text-[#b87209] font-black uppercase italic tracking-[0.4em] text-xs">
@@ -435,7 +424,6 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Trade Details Modal */}
         {selectedTrade && (
           <div className="fixed inset-0 z-[300] flex items-center justify-center p-6 bg-black/95 backdrop-blur-md">
             <div className="w-full max-w-2xl bg-[#080808] border-2 border-[#b87209] shadow-2xl">
@@ -482,7 +470,6 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Footer Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
           <div className="md:col-span-2 bg-[#080808]/90 backdrop-blur-sm border border-white/5 p-10">
             <div className="flex justify-between items-start mb-6">
