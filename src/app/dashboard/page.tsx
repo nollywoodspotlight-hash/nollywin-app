@@ -6,7 +6,6 @@ import {
   useSendTransaction,
   useDisconnect,
   useSwitchChain,
-  useBalance,
 } from "wagmi";
 import { base } from "wagmi/chains";
 import { parseEther } from "viem";
@@ -21,7 +20,6 @@ export default function DashboardPage() {
   const { address, isConnected, chain } = useAccount();
   const { disconnect } = useDisconnect();
   const { switchChain } = useSwitchChain();
-  const { refetch: refreshBalance } = useBalance({ address });
   const router = useRouter();
 
   // --- STATE ---
@@ -43,17 +41,13 @@ export default function DashboardPage() {
 
   const { sendTransactionAsync } = useSendTransaction();
 
+  // --- UTILS ---
   const supabase = useMemo(() => {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
     if (!url || !url.startsWith("http") || !key) return null;
     return createClient(url, key);
   }, []);
-
-  const royaltiesEnabled = isCurrentlyActive && hasRealizedProfit;
-  const referralLink = address
-    ? `https://nollywin.xyz/join?ref=${address}`
-    : "";
 
   // --- HANDLERS ---
   const handleTerminate = () => {
@@ -95,15 +89,16 @@ export default function DashboardPage() {
   };
 
   const handleCopy = () => {
+    const link = `https://nollywin.xyz/join?ref=${address}`;
     if (address) {
-      navigator.clipboard.writeText(referralLink);
+      navigator.clipboard.writeText(link);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
   };
 
   const handleAbortTrade = async (trade: any) => {
-    if (!window.confirm("Abort production?")) return;
+    if (!window.confirm("Abort and liquidate to ETH?")) return;
     try {
       const res = await fetch("/api/abort", {
         method: "POST",
@@ -115,18 +110,20 @@ export default function DashboardPage() {
         window.location.reload();
       }
     } catch (e) {
-      console.error(e);
+      console.error("Abort Failed", e);
     }
   };
 
   const handleTradeAction = async (e: React.MouseEvent) => {
     e.preventDefault();
     if (isTradeActive) return;
+
     if (contractAddress.length < 42) {
-      alert("Invalid CA");
+      alert("Invalid Base Contract Address");
       return;
     }
-    if (chain?.id !== base.id) {
+
+    if (isConnected && chain?.id !== base.id) {
       switchChain?.({ chainId: base.id });
       return;
     }
@@ -138,7 +135,7 @@ export default function DashboardPage() {
         value: parseEther(dcaAmount),
       });
 
-      await fetch("/api/activate", {
+      const response = await fetch("/api/activate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -151,18 +148,23 @@ export default function DashboardPage() {
         }),
       });
 
+      if (!response.ok) throw new Error("Database sync failed");
       window.location.reload();
     } catch (error) {
-      console.error(error);
+      console.error("❌ Startup Failed:", error);
     } finally {
       setIsSyncing(false);
     }
   };
 
+  // --- EFFECTS ---
   useEffect(() => {
-    if (!isConnected) router.push("/");
-    if (isConnected && chain?.id !== base.id)
+    if (!isConnected) {
+      router.push("/");
+    }
+    if (isConnected && chain?.id !== base.id) {
       switchChain?.({ chainId: base.id });
+    }
   }, [isConnected, chain, router, switchChain]);
 
   useEffect(() => {
@@ -173,10 +175,12 @@ export default function DashboardPage() {
         .select("*")
         .eq("wallet_address", address)
         .order("created_at", { ascending: false });
+
       const { count } = await supabase
         .from("users")
         .select("*", { count: "exact", head: true })
         .eq("referred_by", address);
+
       if (data) {
         setTrades(data);
         const active = data.some((s) => s.lifecycle_state === "ACTIVE");
@@ -190,14 +194,19 @@ export default function DashboardPage() {
     syncDashboard();
   }, [address, supabase]);
 
+  const royaltiesEnabled = isCurrentlyActive && hasRealizedProfit;
+  const referralLink = address
+    ? `https://nollywin.xyz/join?ref=${address}`
+    : "";
+
   if (!isConnected) return null;
 
   return (
     <div
       className={`${inter.className} min-h-screen bg-black text-white antialiased selection:bg-[#b87209] selection:text-black`}
     >
-      {/* NOIR NAV BAR */}
-      <nav className="relative z-[150] flex justify-between items-center px-6 py-8 max-w-5xl mx-auto">
+      {/* NOIR NAV BAR - High Z-Index and Relative Position to ensure visibility */}
+      <nav className="relative z-[100] flex justify-between items-center px-6 py-8 max-w-5xl mx-auto">
         <div className="flex items-center gap-3">
           <div
             className={`w-2 h-2 rounded-full animate-pulse ${
@@ -210,10 +219,11 @@ export default function DashboardPage() {
         </div>
         <button
           onClick={handleTerminate}
-          className="group relative z-[160] px-6 py-2 border border-[#b87209]/30 hover:border-[#b87209] transition-all bg-black cursor-pointer pointer-events-auto"
+          className="group relative z-[110] px-6 py-2 border border-[#b87209]/30 hover:border-[#b87209] transition-all duration-500 bg-black cursor-pointer"
         >
-          <span className="relative z-10 text-[10px] font-black uppercase italic text-[#b87209] group-hover:text-white transition-colors">
-            [ Terminate Session / {address?.slice(0, 4)}... ]
+          <span className="relative z-10 text-[10px] font-black uppercase italic tracking-widest text-[#b87209] group-hover:text-white">
+            [ Terminate Session / {address?.slice(0, 4)}...{address?.slice(-4)}{" "}
+            ]
           </span>
           <div className="absolute inset-0 bg-[#b87209] scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-500 opacity-10" />
         </button>
@@ -232,7 +242,7 @@ export default function DashboardPage() {
           </p>
         </div>
 
-        {/* RESTORED TRADING CONSOLE DESIGN */}
+        {/* TRADING CONSOLE */}
         <div className="bg-[#080808] border border-[#b87209]/40 shadow-[0_0_80px_rgba(0,0,0,1)] mb-12">
           <div className="bg-[#b87209]/10 border-b border-[#b87209]/20 px-6 py-3 flex justify-between items-center">
             <span className="text-[10px] font-black uppercase tracking-widest italic text-[#b87209]">
@@ -252,7 +262,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="p-6 md:p-12">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
               <div className="space-y-8">
                 <div className="text-left">
                   <label className="text-[#b87209] uppercase text-[10px] font-black tracking-widest mb-2 block italic">
@@ -315,7 +325,6 @@ export default function DashboardPage() {
                   </div>
                 </div>
               </div>
-
               <div className="flex flex-col items-center justify-center lg:border-l lg:border-white/5 lg:pl-12">
                 <button
                   onClick={handleTradeAction}
@@ -327,7 +336,7 @@ export default function DashboardPage() {
                   }`}
                 >
                   <span className="text-2xl md:text-4xl font-black uppercase italic tracking-tighter">
-                    {isSyncing ? "SYNCING" : isTradeActive ? "ABORT" : "START"}
+                    {isSyncing ? "SYNC..." : isTradeActive ? "ABORT" : "START"}
                   </span>
                 </button>
               </div>
@@ -335,7 +344,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* PROTOCOL RECOVERY SECTION */}
+        {/* PROTOCOL RECOVERY TOOL */}
         {!isTradeActive && (
           <div className="mb-12 bg-[#080808]/50 border border-white/5 p-6 flex flex-col md:flex-row gap-4 items-center">
             <div className="text-left flex-grow">
@@ -370,7 +379,7 @@ export default function DashboardPage() {
             </h2>
             <div className="h-[1px] flex-grow bg-white/5" />
           </div>
-          <div className="space-y-3 text-left">
+          <div className="space-y-3">
             {trades.filter((t) => t.lifecycle_state === "ACTIVE").length ===
             0 ? (
               <div className="py-12 border border-dashed border-white/10 text-center">
