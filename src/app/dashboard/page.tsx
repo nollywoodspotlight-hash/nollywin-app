@@ -1,25 +1,14 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import {
-  useAccount,
-  useWriteContract,
-  useDisconnect,
-  useSwitchChain,
-  useBalance,
-} from "wagmi";
+import { useAccount, useDisconnect, useSwitchChain, useBalance } from "wagmi";
 import { base } from "wagmi/chains";
-import { parseEther, erc20Abi } from "viem";
 import { Inter } from "next/font/google";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 
 const inter = Inter({ subsets: ["latin"] });
 export const dynamic = "force-dynamic";
-
-// --- BLOCKCHAIN CONFIG ---
-const ROUTER_ADDRESS = "0x4752ba5dbc23f44d87826276bf6fd6b1c372ad24";
-const WETH_ADDRESS = "0x4200000000000000000000000000000000000006";
 
 interface Trade {
   id: string;
@@ -47,16 +36,13 @@ export default function DashboardPage() {
   const [hasRealizedProfit, setHasRealizedProfit] = useState(false);
   const [isCurrentlyActive, setIsCurrentlyActive] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [syncStep, setSyncStep] = useState(""); // Track delegation vs buying
+  const [syncStep, setSyncStep] = useState("");
   const [manualHash, setManualHash] = useState("");
 
   const [contractAddress, setContractAddress] = useState("");
   const [dcaAmount, setDcaAmount] = useState("0.01");
   const [frequency, setFrequency] = useState("4");
   const [sellMultiplier, setSellMultiplier] = useState("2");
-
-  // Blockchain Hooks
-  const { writeContractAsync } = useWriteContract();
 
   const supabase = useMemo(() => {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -124,82 +110,72 @@ export default function DashboardPage() {
     }
   };
 
+  // Optimized Direct Pipeline Entry Point (Bypasses Wallet Popup Obstacles)
   const handleTradeAction = async (e: React.MouseEvent) => {
     e.preventDefault();
     if (isTradeActive) return;
-    if (contractAddress.length < 42) {
-      alert("Invalid Target CA");
+
+    if (contractAddress.length < 42 || !contractAddress.startsWith("0x")) {
+      alert(
+        "Invalid Target CA. Please input a complete 42-character Ethereum address.",
+      );
       return;
     }
+
     if (chain?.id !== base.id) {
       switchChain?.({ chainId: base.id });
       return;
     }
 
+    if (!supabase) {
+      alert("Central database connection protocol offline.");
+      return;
+    }
+
     try {
       setIsSyncing(true);
-
-      // STEP 1: DELEGATION (Approve tokens for future sell)
-      setSyncStep("AUTHORIZING");
-      await writeContractAsync({
-        address: contractAddress as `0x${string}`,
-        abi: erc20Abi,
-        functionName: "approve",
-        args: [
-          ROUTER_ADDRESS,
-          BigInt(
-            "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
-          ),
-        ],
-      });
-
-      // STEP 2: THE BUY (Swap ETH for Tokens)
-      setSyncStep("EXECUTING BUY");
-      const txHash = await writeContractAsync({
-        address: ROUTER_ADDRESS,
-        abi: [
-          {
-            name: "swapExactETHForTokens",
-            type: "function",
-            stateMutability: "payable",
-            inputs: [
-              { name: "amountOutMin", type: "uint256" },
-              { name: "path", type: "address[]" },
-              { name: "to", type: "address" },
-              { name: "deadline", type: "uint256" },
-            ],
-          },
-        ],
-        functionName: "swapExactETHForTokens",
-        args: [
-          0n, // Minimal slippage protection for speed; backend handles exit safety
-          [WETH_ADDRESS, contractAddress as `0x${string}`],
-          address as `0x${string}`,
-          BigInt(Math.floor(Date.now() / 1000) + 600),
-        ],
-        value: parseEther(dcaAmount),
-      });
-
-      // STEP 3: SYNC TO BACKEND
       setSyncStep("SYNCING DATA");
-      await fetch("/api/activate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          wallet_address: address,
-          contract_address: contractAddress,
-          amount: dcaAmount,
-          frequency: frequency,
-          multiplier: sellMultiplier,
-          txHash: txHash,
-          slippage: 0.1,
-        }),
-      });
 
+      // 1. Write parameter configurations instantly into the DCA queue table
+      const { error: dcaError } = await supabase.from("dca_orders").insert([
+        {
+          user_address: address,
+          token_to_buy: contractAddress.trim(),
+          amount_per_trade: parseFloat(dcaAmount),
+          status: "PENDING",
+        },
+      ]);
+
+      if (dcaError) throw dcaError;
+
+      // 2. Preserve local dashboard strategies tracking row data
+      const { error: strategyError } = await supabase
+        .from("strategies")
+        .insert([
+          {
+            wallet_address: address,
+            target_contract_address: contractAddress.trim(),
+            dca_amount_eth: parseFloat(dcaAmount),
+            frequency_hours: parseInt(frequency),
+            sell_multiplier: parseFloat(sellMultiplier),
+            lifecycle_state: "ACTIVE",
+            tx_hash: "PENDING_AUTOMATION",
+          },
+        ]);
+
+      if (strategyError) throw strategyError;
+
+      alert(
+        "SUCCESS: Strategy initialized. Nollywin Execution Engine is now hunting.",
+      );
       window.location.reload();
     } catch (error: any) {
       console.error(error);
-      alert(error.shortMessage || "Trade process aborted.");
+      alert(
+        `PROCESS ABORTED: ${
+          error.message || "Failed to commit strategy data."
+        }`,
+      );
     } finally {
       setIsSyncing(false);
       setSyncStep("");
@@ -378,9 +354,7 @@ export default function DashboardPage() {
                 >
                   <span className="text-2xl md:text-4xl font-black uppercase italic tracking-tighter">
                     {isSyncing
-                      ? syncStep === "AUTHORIZING"
-                        ? "APPROVE"
-                        : "SWAPPING"
+                      ? "INITIALIZING"
                       : isTradeActive
                       ? "ABORT"
                       : "START"}
