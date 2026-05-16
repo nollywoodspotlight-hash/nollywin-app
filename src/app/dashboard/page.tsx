@@ -28,6 +28,7 @@ export default function DashboardPage() {
   const router = useRouter();
 
   // --- STATE ---
+  const [mounted, setMounted] = useState(false); // Fixes Client Hydration mismatches
   const [trades, setTrades] = useState<Trade[]>([]);
   const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
   const [referralCount, setReferralCount] = useState(0);
@@ -45,10 +46,8 @@ export default function DashboardPage() {
   const [sellMultiplier, setSellMultiplier] = useState("2");
 
   const supabase = useMemo(() => {
-    // Explicitly pass your keys to bypass local environmental file blocks
     const url = "https://acwbclupfnunoqyhjrcx.supabase.co";
     const key = "sb_publishable_t1rYXtsc8AAEEIPCvApKlw_IXnDdBJj";
-
     return createClient(url, key);
   }, []);
 
@@ -111,7 +110,6 @@ export default function DashboardPage() {
     }
   };
 
-  // Optimized Direct Pipeline Entry Point (Bypasses Wallet Popup Obstacles)
   const handleTradeAction = async (e: React.MouseEvent) => {
     e.preventDefault();
     if (isTradeActive) return;
@@ -137,7 +135,6 @@ export default function DashboardPage() {
       setIsSyncing(true);
       setSyncStep("SYNCING DATA");
 
-      // 1. Write parameter configurations instantly into the DCA queue table
       const { error: dcaError } = await supabase.from("dca_orders").insert([
         {
           user_address: address,
@@ -149,7 +146,6 @@ export default function DashboardPage() {
 
       if (dcaError) throw dcaError;
 
-      // 2. Preserve local dashboard strategies tracking row data
       const { error: strategyError } = await supabase
         .from("strategies")
         .insert([
@@ -211,16 +207,19 @@ export default function DashboardPage() {
   // --- EFFECTS ---
 
   useEffect(() => {
-    if (!isConnected) router.push("/");
-    if (isConnected && chain?.id !== base.id)
+    setMounted(true); // Registers client paint completion
+  }, []);
+
+  useEffect(() => {
+    if (mounted && !isConnected) router.push("/");
+    if (mounted && isConnected && chain?.id !== base.id)
       switchChain?.({ chainId: base.id });
-  }, [isConnected, chain, router, switchChain]);
+  }, [isConnected, chain, router, switchChain, mounted]);
 
   useEffect(() => {
     async function syncDashboard() {
       if (!address || !supabase) return;
 
-      // Querying the primary execution data table directly
       const { data, error } = await supabase
         .from("dca_orders")
         .select("*")
@@ -233,7 +232,6 @@ export default function DashboardPage() {
         .eq("referred_by", address);
 
       if (data) {
-        // Maps the incoming database rows smoothly into your UI interface properties
         const formattedTrades = data.map((order: any) => ({
           id: order.id.toString(),
           wallet_address: order.user_address,
@@ -246,7 +244,6 @@ export default function DashboardPage() {
 
         setTrades(formattedTrades);
 
-        // Evaluates active/completed states across the pipeline to wake the layout status indicators up
         const active = data.some((s: any) => s.status === "PENDING");
         const completed = data.some((s: any) => s.status === "COMPLETED");
         const profit = data.some((s: any) => (s.profit_eth || 0) > 0);
@@ -261,10 +258,11 @@ export default function DashboardPage() {
 
       if (count !== null) setReferralCount(count);
     }
-    syncDashboard();
-  }, [address, supabase]);
+    if (mounted) syncDashboard();
+  }, [address, supabase, mounted]);
 
-  if (!isConnected) return null;
+  // Prevent server-side render until client context is mounted
+  if (!mounted || !isConnected) return null;
 
   return (
     <div
@@ -341,7 +339,11 @@ export default function DashboardPage() {
                       className="w-full bg-transparent border-b border-white/10 text-lg font-bold italic text-[#b87209] outline-none"
                     >
                       {Array.from({ length: 24 }, (_, i) => i + 1).map((h) => (
-                        <option key={h} value={h.toString()}>
+                        <option
+                          key={h}
+                          value={h.toString()}
+                          className="bg-black text-white"
+                        >
                           {h}H
                         </option>
                       ))}
@@ -358,7 +360,11 @@ export default function DashboardPage() {
                       className="w-full bg-transparent border-b border-white/10 text-lg font-bold italic text-[#b87209] outline-none"
                     >
                       {Array.from({ length: 20 }, (_, i) => i + 1).map((m) => (
-                        <option key={m} value={m.toString()}>
+                        <option
+                          key={m}
+                          value={m.toString()}
+                          className="bg-black text-white"
+                        >
                           {m}X
                         </option>
                       ))}
