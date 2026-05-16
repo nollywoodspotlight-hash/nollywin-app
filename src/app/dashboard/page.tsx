@@ -45,9 +45,10 @@ export default function DashboardPage() {
   const [sellMultiplier, setSellMultiplier] = useState("2");
 
   const supabase = useMemo(() => {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    if (!url || !url.startsWith("http") || !key) return null;
+    // Explicitly pass your keys to bypass local environmental file blocks
+    const url = "https://acwbclupfnunoqyhjrcx.supabase.co";
+    const key = "sb_publishable_t1rYXtsc8AAEEIPCvApKlw_IXnDdBJj";
+
     return createClient(url, key);
   }, []);
 
@@ -218,23 +219,46 @@ export default function DashboardPage() {
   useEffect(() => {
     async function syncDashboard() {
       if (!address || !supabase) return;
-      const { data } = await supabase
-        .from("strategies")
+
+      // Querying the primary execution data table directly
+      const { data, error } = await supabase
+        .from("dca_orders")
         .select("*")
-        .eq("wallet_address", address)
-        .order("created_at", { ascending: false });
+        .eq("user_address", address)
+        .order("id", { ascending: false });
+
       const { count } = await supabase
         .from("users")
         .select("*", { count: "exact", head: true })
         .eq("referred_by", address);
+
       if (data) {
-        setTrades(data as Trade[]);
-        const active = data.some((s: Trade) => s.lifecycle_state === "ACTIVE");
-        const profit = data.some((s: Trade) => (s.profit_eth || 0) > 0);
-        setIsCurrentlyActive(active);
+        // Maps the incoming database rows smoothly into your UI interface properties
+        const formattedTrades = data.map((order: any) => ({
+          id: order.id.toString(),
+          wallet_address: order.user_address,
+          target_contract_address: order.token_to_buy || "",
+          dca_amount_eth: order.amount_per_trade || 0,
+          lifecycle_state:
+            order.status === "COMPLETED" ? "COMPLETED" : "ACTIVE",
+          profit_eth: order.profit_eth || 0,
+        }));
+
+        setTrades(formattedTrades);
+
+        // Evaluates active/completed states across the pipeline to wake the layout status indicators up
+        const active = data.some((s: any) => s.status === "PENDING");
+        const completed = data.some((s: any) => s.status === "COMPLETED");
+        const profit = data.some((s: any) => (s.profit_eth || 0) > 0);
+
+        setIsCurrentlyActive(active || completed);
         setHasRealizedProfit(profit);
-        if (active) setIsTradeActive(true);
+
+        if (active || completed) {
+          setIsTradeActive(true);
+        }
       }
+
       if (count !== null) setReferralCount(count);
     }
     syncDashboard();
