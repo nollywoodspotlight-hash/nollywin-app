@@ -48,36 +48,47 @@ export default function ArchivePage() {
       setLoading(true);
       if (!supabase || !address) return;
 
-      // Pull rows that have concluded from the core dca_orders matrix
+      console.log(
+        `📡 Fetching archive profiles for connected account actor: ${address}`,
+      );
+
+      // Fetch ALL orders for this user address to perform case-insensitive local resolution
       const { data, error } = await supabase
         .from("dca_orders")
         .select("*")
-        .eq("user_address", address.toLowerCase())
         .order("id", { ascending: false });
 
       if (error) throw error;
 
-      // Filter and cleanly parse concluded rows in local client memory
-      const finishedOrders = (data || []).filter((order: any) => {
-        const checkStatus = String(order.status || "").toUpperCase();
+      const userLower = address.toLowerCase();
+
+      // ✅ CASE-INSENSITIVE MATCHING LAYER: Catches both upper/lower variants perfectly
+      const userConcludedOrders = (data || []).filter((order: any) => {
+        const dbUser = String(order.user_address || "").toLowerCase();
+        const dbStatus = String(order.status || "").toUpperCase();
+
+        // Match user's wallet AND verify if the order is in a concluded or requested abort state
         return (
-          checkStatus === "COMPLETED" ||
-          checkStatus === "ABORTED" ||
-          checkStatus === "FAILED"
+          dbUser === userLower &&
+          (dbStatus === "COMPLETED" ||
+            dbStatus === "ABORTED" ||
+            dbStatus === "ABORT_REQUESTED" ||
+            dbStatus === "FAILED")
         );
       });
 
-      const categorized = finishedOrders.map((order: any) => {
+      const categorized = userConcludedOrders.map((order: any) => {
         const profit = order.profit_eth || 0;
         const currentStatus = String(order.status || "").toUpperCase();
         let type = "ABORTED";
 
         if (currentStatus === "COMPLETED") {
           type = profit > 0 ? "PROFIT" : "LOSS";
-        } else if (currentStatus === "ABORTED") {
-          type = "ABORTED";
         } else if (currentStatus === "FAILED") {
           type = "LOSS";
+        } else {
+          // Both ABORTED and intermediate ABORT_REQUESTED fallback here
+          type = "ABORTED";
         }
 
         return {
@@ -199,6 +210,7 @@ export default function ArchivePage() {
                       Script ID: {trade.id} • STATUS:{" "}
                       <span
                         className={
+                          trade.status === "ABORT_REQUESTED" ||
                           trade.status === "ABORTED"
                             ? "text-red-500/80 font-mono"
                             : "text-green-500/80 font-mono"
