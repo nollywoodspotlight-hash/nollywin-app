@@ -114,7 +114,6 @@ export default function DashboardPage() {
 
   const handleTradeAction = async (e: React.MouseEvent) => {
     e.preventDefault();
-    if (isTradeActive) return;
 
     if (contractAddress.length < 42 || !contractAddress.startsWith("0x")) {
       alert(
@@ -168,7 +167,34 @@ export default function DashboardPage() {
       alert(
         "SUCCESS: Sniper target locked. Nollywin High-Frequency Engine is scanning active blocks.",
       );
-      window.location.reload();
+
+      // ✅ FIX: Clear input fields seamlessly instead of forcing a slow page reload
+      setContractAddress("");
+
+      // Re-trigger live state evaluation locally
+      const { data } = await supabase
+        .from("dca_orders")
+        .select("*")
+        .eq("user_address", address)
+        .order("id", { ascending: false });
+
+      if (data) {
+        const formattedTrades = data.map((order: any) => {
+          const currentStatus = String(order.status || "").toUpperCase();
+          return {
+            id: order.id.toString(),
+            wallet_address: order.user_address,
+            target_contract_address: order.token_to_buy || "",
+            dca_amount_eth: order.amount_per_trade || 0,
+            lifecycle_state:
+              currentStatus === "COMPLETED" ? "COMPLETED" : "ACTIVE",
+            status: order.status || "PENDING",
+            tx_hash: order.tx_hash || "AWAITING_HIGH_SPEED_BLOCK_SWAP",
+            profit_eth: order.profit_eth || 0,
+          };
+        });
+        setTrades(formattedTrades);
+      }
     } catch (error: any) {
       console.error(error);
       alert(
@@ -268,7 +294,7 @@ export default function DashboardPage() {
         setIsCurrentlyActive(active || completed);
         setHasRealizedProfit(profit);
 
-        // Sniper Module Safety: Inputs lock strictly when a block swap transaction is actively running
+        // ✅ FIX: Keep system metrics accurate, but NEVER clamp the UI input state true
         if (active) {
           setIsTradeActive(true);
         } else {
@@ -307,14 +333,14 @@ export default function DashboardPage() {
             </span>
             <span
               className={`text-[10px] font-black uppercase italic ${
-                isTradeActive
+                trades.some((t) => t.status === "PENDING")
                   ? "text-green-500 font-mono tracking-widest"
                   : "text-red-500"
               }`}
             >
               {isSyncing
                 ? `● ${syncStep || "LOCKING TARGET"}`
-                : isTradeActive
+                : trades.some((t) => t.status === "PENDING")
                 ? "● SNIPER ACTIVE (LISTENING H-F BLOCKS)"
                 : "● STANDBY"}
             </span>
@@ -331,7 +357,7 @@ export default function DashboardPage() {
                     type="text"
                     placeholder="0x..."
                     value={contractAddress}
-                    disabled={isTradeActive}
+                    disabled={false} // ✅ FIX: Always Unlocked for Parallel Stacking
                     onChange={(e) => setContractAddress(e.target.value)}
                     className="w-full bg-black/50 border-b-2 border-white/10 py-3 text-xl font-mono text-white outline-none focus:border-[#b87209]"
                   />
@@ -345,7 +371,7 @@ export default function DashboardPage() {
                       type="number"
                       step="0.01"
                       value={dcaAmount}
-                      disabled={isTradeActive}
+                      disabled={false} // ✅ FIX: Always Unlocked for Parallel Stacking
                       onChange={(e) => setDcaAmount(e.target.value)}
                       className="w-full bg-transparent border-b border-white/10 text-xl font-bold italic text-white outline-none"
                     />
@@ -356,7 +382,7 @@ export default function DashboardPage() {
                     </label>
                     <select
                       value={frequency}
-                      disabled={isTradeActive}
+                      disabled={false} // ✅ FIX: Always Unlocked for Parallel Stacking
                       onChange={(e) => setFrequency(e.target.value)}
                       className="w-full bg-transparent border-b border-white/10 text-lg font-bold italic text-[#b87209] outline-none"
                     >
@@ -377,7 +403,7 @@ export default function DashboardPage() {
                     </label>
                     <select
                       value={sellMultiplier}
-                      disabled={isTradeActive}
+                      disabled={false} // ✅ FIX: Always Unlocked for Parallel Stacking
                       onChange={(e) => setSellMultiplier(e.target.value)}
                       className="w-full bg-transparent border-b border-white/10 text-lg font-bold italic text-[#b87209] outline-none"
                     >
@@ -398,18 +424,10 @@ export default function DashboardPage() {
                 <button
                   onClick={handleTradeAction}
                   disabled={isSyncing}
-                  className={`w-full h-32 md:h-64 border-4 transition-all duration-500 active:scale-95 ${
-                    isTradeActive
-                      ? "border-red-600 bg-red-600/5 text-red-600"
-                      : "border-[#b87209] bg-transparent text-[#b87209] hover:bg-[#b87209] hover:text-black"
-                  }`}
+                  className="w-full h-32 md:h-64 border-4 border-[#b87209] bg-transparent text-[#b87209] hover:bg-[#b87209] hover:text-black transition-all duration-500 active:scale-95"
                 >
                   <span className="text-2xl md:text-4xl font-black uppercase italic tracking-tighter">
-                    {isSyncing
-                      ? "ENGAGING ENGINE"
-                      : isTradeActive
-                      ? "ABORT H-F"
-                      : "DEPLOY SNIPER"}
+                    {isSyncing ? "ENGAGING ENGINE" : "DEPLOY SNIPER"}
                   </span>
                 </button>
               </div>
@@ -417,31 +435,29 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {!isTradeActive && (
-          <div className="mb-12 bg-[#080808]/80 backdrop-blur-sm border border-[#b87209]/30 p-6 flex flex-col md:flex-row gap-4 items-center rounded-sm shadow-xl">
-            <div className="text-left flex-grow">
-              <h4 className="text-[#b87209] text-[11px] font-black uppercase italic tracking-widest">
-                Protocol Recovery
-              </h4>
-              <p className="text-gray-500 text-[8px] uppercase font-bold italic mt-1">
-                Paste Hash to claim trade if it didn&apos;t appear.
-              </p>
-            </div>
-            <input
-              type="text"
-              placeholder="0x... (Hash)"
-              value={manualHash}
-              onChange={(e) => setManualHash(e.target.value)}
-              className="bg-black border border-white/10 px-4 py-3 text-[11px] font-mono text-[#b87209] w-full md:w-96 outline-none focus:border-[#b87209]/60"
-            />
-            <button
-              onClick={handleManualSync}
-              className="whitespace-nowrap px-8 py-3 bg-[#b87209] text-black text-[10px] font-black uppercase italic hover:bg-white transition-all"
-            >
-              Claim Production
-            </button>
+        <div className="mb-12 bg-[#080808]/80 backdrop-blur-sm border border-[#b87209]/30 p-6 flex flex-col md:flex-row gap-4 items-center rounded-sm shadow-xl">
+          <div className="text-left flex-grow">
+            <h4 className="text-[#b87209] text-[11px] font-black uppercase italic tracking-widest">
+              Protocol Recovery
+            </h4>
+            <p className="text-gray-500 text-[8px] uppercase font-bold italic mt-1">
+              Paste Hash to claim trade if it didn&apos;t appear.
+            </p>
           </div>
-        )}
+          <input
+            type="text"
+            placeholder="0x... (Hash)"
+            value={manualHash}
+            onChange={(e) => setManualHash(e.target.value)}
+            className="bg-black border border-white/10 px-4 py-3 text-[11px] font-mono text-[#b87209] w-full md:w-96 outline-none focus:border-[#b87209]/60"
+          />
+          <button
+            onClick={handleManualSync}
+            className="whitespace-nowrap px-8 py-3 bg-[#b87209] text-black text-[10px] font-black uppercase italic hover:bg-white transition-all"
+          >
+            Claim Production
+          </button>
+        </div>
 
         <div className="mb-12">
           <div className="flex items-center gap-4 mb-8">
@@ -552,12 +568,12 @@ export default function DashboardPage() {
                   </p>
                 </div>
 
-                {selectedTrade.lifecycle_state === "ACTIVE" && (
+                {selectedTrade.status === "PENDING" && (
                   <button
                     onClick={() => handleAbortTrade(selectedTrade)}
                     className="w-full py-8 bg-red-600 hover:bg-red-700 text-white font-black uppercase italic text-2xl tracking-tighter transition-all active:scale-95 shadow-lg"
                   >
-                    ABORT PRODUCTION
+                    ABORT POSITION TRACKING
                   </button>
                 )}
               </div>
