@@ -51,26 +51,37 @@ export default function ArchivePage() {
       setLoading(true);
       if (!supabase || !address) return;
 
+      // ✅ FIXED: Route queries straight to the core dca_orders matrix matching historical endpoints
       const { data, error } = await supabase
-        .from("strategies")
+        .from("dca_orders")
         .select("*")
-        .eq("wallet_address", address) // Only show records for the connected actor
-        .in("lifecycle_state", ["COMPLETED", "CANCELLED"])
-        .order("created_at", { ascending: false });
+        .eq("user_address", address)
+        .in("status", ["COMPLETED", "ABORTED", "FAILED"])
+        .order("id", { ascending: false });
 
       if (error) throw error;
 
-      const categorized = (data || []).map((trade: any) => {
-        const profit = trade.profit_eth || 0;
+      const categorized = (data || []).map((order: any) => {
+        const profit = order.profit_eth || 0;
         let type = "CANCELLED";
 
-        if (trade.lifecycle_state === "COMPLETED") {
+        if (order.status === "COMPLETED") {
           type = profit > 0 ? "PROFIT" : "LOSS";
-        } else if (trade.lifecycle_state === "CANCELLED") {
+        } else if (order.status === "ABORTED") {
           type = "CANCELLED";
+        } else if (order.status === "FAILED") {
+          type = "LOSS";
         }
 
-        return { ...trade, profit, type };
+        return {
+          id: order.id.toString(),
+          target_contract_address: order.token_to_buy || "",
+          dca_amount_eth: order.amount_per_trade || 0,
+          status: order.status,
+          tx_hash: order.tx_hash || "AWAITING_HIGH_SPEED_BLOCK_SWAP",
+          profit,
+          type,
+        };
       });
 
       setTrades(categorized);
@@ -91,7 +102,7 @@ export default function ArchivePage() {
         ? `🎬 Production wrap! $${
             trade.token_ticker || "MEME"
           } profit: ${trade.profit.toFixed(4)} ETH. Onchain via @NollyWin.`
-        : `🎬 Production Log: Closed script on Base. @NollyWin.`;
+        : `🎬 Production Log: Closed sniper tracking configuration script on Base. @NollyWin.`;
 
     window.open(
       `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`,
@@ -121,7 +132,7 @@ export default function ArchivePage() {
             Production <span className="text-[#b87209]">Archive</span>
           </h1>
           <p className="text-gray-500 uppercase tracking-[0.3em] text-[10px] md:text-xs mt-2 font-bold italic">
-            Historical Records / Performance Logs / {address?.slice(0, 6)}...
+            Historical Records / Performance Logs / {address?.slice(0, 14)}...
           </p>
         </div>
 
@@ -174,22 +185,29 @@ export default function ArchivePage() {
                       <XCircle size={24} />
                     )}
                   </div>
-                  <div>
+                  <div className="text-left">
                     <h3 className="text-2xl font-black italic tracking-tighter uppercase leading-none">
                       $
                       {trade.token_ticker ||
-                        trade.target_contract_address.slice(0, 6)}
+                        trade.target_contract_address.slice(0, 12)}
+                      ...
                     </h3>
                     <p className="text-[9px] text-gray-600 font-bold uppercase tracking-widest mt-1">
-                      Script ID: {trade.id} •{" "}
-                      {trade.type === "CANCELLED"
-                        ? "ABORTED"
-                        : trade.lifecycle_state}
+                      Script ID: {trade.id} • STATUS:{" "}
+                      <span
+                        className={
+                          trade.status === "ABORTED"
+                            ? "text-red-500/80"
+                            : "text-green-500/80"
+                        }
+                      >
+                        {trade.status}
+                      </span>
                     </p>
                   </div>
                 </div>
 
-                <div className="flex gap-10 w-full md:w-auto border-y md:border-y-0 border-white/5 py-4 md:py-0">
+                <div className="flex gap-10 w-full md:w-auto border-y md:border-y-0 border-white/5 py-4 md:py-0 text-left">
                   <div className="text-center md:text-left">
                     <p className="text-gray-600 uppercase text-[8px] font-black italic mb-1">
                       Net PnL (ETH)
