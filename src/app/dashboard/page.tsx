@@ -15,7 +15,9 @@ interface Trade {
   wallet_address: string;
   target_contract_address: string;
   dca_amount_eth: number;
-  lifecycle_state: string;
+  lifecycle_state: string; // Internal visual card mapping state
+  status: string; // Direct production table tracking status (PENDING, COMPLETED)
+  tx_hash: string; // On-chain broadcast deployment hash tracking
   profit_eth?: number;
   created_at?: string;
 }
@@ -133,7 +135,7 @@ export default function DashboardPage() {
 
     try {
       setIsSyncing(true);
-      setSyncStep("SYNCING DATA");
+      setSyncStep("SNIPER DEPLOYMENT INITIATED");
 
       const { error: dcaError } = await supabase.from("dca_orders").insert([
         {
@@ -141,6 +143,7 @@ export default function DashboardPage() {
           token_to_buy: contractAddress.trim(),
           amount_per_trade: parseFloat(dcaAmount),
           status: "PENDING",
+          tx_hash: "AWAITING_HIGH_SPEED_BLOCK_SWAP",
         },
       ]);
 
@@ -156,21 +159,21 @@ export default function DashboardPage() {
             frequency_hours: parseInt(frequency),
             sell_multiplier: parseFloat(sellMultiplier),
             lifecycle_state: "ACTIVE",
-            tx_hash: "PENDING_AUTOMATION",
+            tx_hash: "AWAITING_HIGH_SPEED_BLOCK_SWAP",
           },
         ]);
 
       if (strategyError) throw strategyError;
 
       alert(
-        "SUCCESS: Strategy initialized. Nollywin Execution Engine is now hunting.",
+        "SUCCESS: Sniper target locked. Nollywin High-Frequency Engine is scanning active blocks.",
       );
       window.location.reload();
     } catch (error: any) {
       console.error(error);
       alert(
-        `PROCESS ABORTED: ${
-          error.message || "Failed to commit strategy data."
+        `DEPLOYMENT ABORTED: ${
+          error.message || "Failed to broadcast sniper order parameters."
         }`,
       );
     } finally {
@@ -188,7 +191,12 @@ export default function DashboardPage() {
   };
 
   const handleAbortTrade = async (trade: Trade) => {
-    if (!window.confirm("Abort production and liquidate for profit?")) return;
+    if (
+      !window.confirm(
+        "Abort sniper position tracking and liquidate current assets for profit?",
+      )
+    )
+      return;
     try {
       const res = await fetch("/api/abort", {
         method: "POST",
@@ -232,27 +240,39 @@ export default function DashboardPage() {
         .eq("referred_by", address);
 
       if (data) {
-        const formattedTrades = data.map((order: any) => ({
-          id: order.id.toString(),
-          wallet_address: order.user_address,
-          target_contract_address: order.token_to_buy || "",
-          dca_amount_eth: order.amount_per_trade || 0,
-          lifecycle_state:
-            order.status === "COMPLETED" ? "COMPLETED" : "ACTIVE",
-          profit_eth: order.profit_eth || 0,
-        }));
+        const formattedTrades = data.map((order: any) => {
+          const currentStatus = String(order.status || "").toUpperCase();
+          return {
+            id: order.id.toString(),
+            wallet_address: order.user_address,
+            target_contract_address: order.token_to_buy || "",
+            dca_amount_eth: order.amount_per_trade || 0,
+            lifecycle_state:
+              currentStatus === "COMPLETED" ? "COMPLETED" : "ACTIVE",
+            status: order.status || "PENDING",
+            tx_hash: order.tx_hash || "AWAITING_HIGH_SPEED_BLOCK_SWAP",
+            profit_eth: order.profit_eth || 0,
+          };
+        });
 
         setTrades(formattedTrades);
 
-        const active = data.some((s: any) => s.status === "PENDING");
-        const completed = data.some((s: any) => s.status === "COMPLETED");
+        const active = data.some(
+          (s: any) => String(s.status || "").toUpperCase() === "PENDING",
+        );
+        const completed = data.some(
+          (s: any) => String(s.status || "").toUpperCase() === "COMPLETED",
+        );
         const profit = data.some((s: any) => (s.profit_eth || 0) > 0);
 
         setIsCurrentlyActive(active || completed);
         setHasRealizedProfit(profit);
 
-        if (active || completed) {
+        // Sniper Module Safety: Inputs lock strictly when a block swap transaction is actively running
+        if (active) {
           setIsTradeActive(true);
+        } else {
+          setIsTradeActive(false);
         }
       }
 
@@ -283,17 +303,19 @@ export default function DashboardPage() {
         <div className="bg-[#080808]/90 backdrop-blur-sm border border-[#b87209]/40 shadow-2xl mb-12">
           <div className="bg-[#b87209]/10 border-b border-[#b87209]/20 px-6 py-3 flex justify-between items-center">
             <span className="text-[10px] font-black uppercase tracking-widest italic text-[#b87209]">
-              Script Editor
+              Sniper Module Editor
             </span>
             <span
               className={`text-[10px] font-black uppercase italic ${
-                isTradeActive ? "text-green-500" : "text-red-500"
+                isTradeActive
+                  ? "text-green-500 font-mono tracking-widest"
+                  : "text-red-500"
               }`}
             >
               {isSyncing
-                ? `● ${syncStep || "SYNCING"}`
+                ? `● ${syncStep || "LOCKING TARGET"}`
                 : isTradeActive
-                ? "● RUNNING"
+                ? "● SNIPER ACTIVE (LISTENING H-F BLOCKS)"
                 : "● STANDBY"}
             </span>
           </div>
@@ -303,7 +325,7 @@ export default function DashboardPage() {
               <div className="space-y-8">
                 <div>
                   <label className="text-[#b87209] uppercase text-[10px] font-black tracking-widest mb-2 block italic">
-                    Target CA
+                    Target Token CA
                   </label>
                   <input
                     type="text"
@@ -330,7 +352,7 @@ export default function DashboardPage() {
                   </div>
                   <div>
                     <label className="text-gray-600 uppercase text-[9px] font-black block mb-2 italic">
-                      Interval
+                      Frequency
                     </label>
                     <select
                       value={frequency}
@@ -351,7 +373,7 @@ export default function DashboardPage() {
                   </div>
                   <div>
                     <label className="text-gray-600 uppercase text-[9px] font-black block mb-2 italic">
-                      Exit
+                      Exit Target
                     </label>
                     <select
                       value={sellMultiplier}
@@ -384,10 +406,10 @@ export default function DashboardPage() {
                 >
                   <span className="text-2xl md:text-4xl font-black uppercase italic tracking-tighter">
                     {isSyncing
-                      ? "INITIALIZING"
+                      ? "ENGAGING ENGINE"
                       : isTradeActive
-                      ? "ABORT"
-                      : "START"}
+                      ? "ABORT H-F"
+                      : "DEPLOY SNIPER"}
                   </span>
                 </button>
               </div>
@@ -424,7 +446,7 @@ export default function DashboardPage() {
         <div className="mb-12">
           <div className="flex items-center gap-4 mb-8">
             <h2 className="text-[#b87209] font-black uppercase italic tracking-[0.4em] text-xs">
-              Live Feed
+              Live Sniper Feed
             </h2>
             <div className="h-[1px] flex-grow bg-white/5" />
           </div>
@@ -432,7 +454,7 @@ export default function DashboardPage() {
             {trades.length === 0 ? (
               <div className="py-12 border border-dashed border-white/10 bg-black/20 text-center">
                 <p className="text-gray-700 text-[10px] font-black uppercase italic tracking-[0.3em]">
-                  No Active Productions
+                  No Active Positions Monitored
                 </p>
               </div>
             ) : (
@@ -448,7 +470,7 @@ export default function DashboardPage() {
                 >
                   <div className="text-left">
                     <p className="text-white font-bold uppercase text-xs tracking-widest">
-                      Target: {trade.target_contract_address.slice(0, 12)}...
+                      Target CA: {trade.target_contract_address.slice(0, 12)}...
                     </p>
                     <p
                       className={`text-[10px] mt-1 font-mono italic ${
@@ -458,8 +480,8 @@ export default function DashboardPage() {
                       }`}
                     >
                       {trade.lifecycle_state === "COMPLETED"
-                        ? `PROFIT: +${trade.profit_eth || "0"} ETH`
-                        : `HUNTING: ${trade.dca_amount_eth} ETH`}
+                        ? `PROFIT ARCHIVED: +${trade.profit_eth || "0"} ETH`
+                        : `SCANNING BLOCKS: ${trade.dca_amount_eth} ETH`}
                     </p>
                   </div>
                   <span
@@ -472,7 +494,7 @@ export default function DashboardPage() {
                     [{" "}
                     {trade.lifecycle_state === "COMPLETED"
                       ? "INTEL ARCHIVE"
-                      : "VIEW INTEL"}{" "}
+                      : "VIEW TARGET INTEL"}{" "}
                     ]
                   </span>
                 </button>
@@ -486,34 +508,50 @@ export default function DashboardPage() {
             <div className="w-full max-w-2xl bg-[#080808] border-2 border-[#b87209] shadow-2xl">
               <div className="bg-[#b87209] px-8 py-4 flex justify-between items-center text-left">
                 <h3 className="text-black font-black uppercase italic text-xl tracking-tighter">
-                  Intel: {selectedTrade.id}
+                  Sniper Target Parameters: Order #{selectedTrade.id}
                 </h3>
                 <button
                   onClick={() => setSelectedTrade(null)}
-                  className="text-black font-black hover:rotate-90 transition-all"
+                  className="text-black font-black hover:rotate-90 transition-all text-sm font-mono"
                 >
                   [X]
                 </button>
               </div>
-              <div className="p-10 space-y-10 text-left">
-                <div className="grid grid-cols-2 gap-10 border-b border-white/5 pb-10">
+              <div className="p-10 space-y-8 text-left">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 border-b border-white/5 pb-8">
                   <div>
                     <p className="text-[#b87209] text-[10px] uppercase font-black italic mb-2 tracking-widest">
-                      Contract
+                      Target Asset Contract
                     </p>
-                    <p className="text-white text-xs truncate font-mono">
+                    <p className="text-white text-xs truncate font-mono select-all bg-black/30 p-2 border border-white/5 rounded-sm">
                       {selectedTrade.target_contract_address}
                     </p>
                   </div>
                   <div>
                     <p className="text-[#b87209] text-[10px] uppercase font-black italic mb-2 tracking-widest">
-                      Status
+                      On-Chain Pipeline State
                     </p>
-                    <p className="text-white text-xs uppercase font-black italic">
-                      {selectedTrade.lifecycle_state}
+                    <p
+                      className={`text-xs uppercase font-black italic tracking-wider p-2 border rounded-sm inline-block ${
+                        selectedTrade.lifecycle_state === "COMPLETED"
+                          ? "text-green-500 border-green-500/20 bg-green-500/5"
+                          : "text-[#b87209] border-[#b87209]/20 bg-[#b87209]/5"
+                      }`}
+                    >
+                      {selectedTrade.status}
                     </p>
                   </div>
                 </div>
+
+                <div className="border-b border-white/5 pb-8">
+                  <p className="text-[#b87209] text-[10px] uppercase font-black italic mb-2 tracking-widest">
+                    Network Execution Broadcast Hash
+                  </p>
+                  <p className="text-gray-400 text-xs font-mono select-all break-all bg-black/40 p-3 border border-white/5 rounded-sm tracking-tighter">
+                    {selectedTrade.tx_hash}
+                  </p>
+                </div>
+
                 {selectedTrade.lifecycle_state === "ACTIVE" && (
                   <button
                     onClick={() => handleAbortTrade(selectedTrade)}
