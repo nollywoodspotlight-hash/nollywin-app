@@ -61,21 +61,13 @@ export default function DashboardPage() {
     ? `https://nollywin.xyz/join?ref=${address}`
     : "";
 
+  // Only keep track of live active positions here
   const activeSnipers = useMemo(() => {
     return trades.filter(
       (t) =>
         t.status === "PENDING" ||
         t.status === "ACTIVE_HUNTING" ||
         t.status === "TRACKING_PROFIT",
-    );
-  }, [trades]);
-
-  const archivedSnipers = useMemo(() => {
-    return trades.filter(
-      (t) =>
-        t.status === "COMPLETED" ||
-        t.status === "ABORTED" ||
-        t.status === "FAILED",
     );
   }, [trades]);
 
@@ -162,7 +154,6 @@ export default function DashboardPage() {
       setIsSyncing(true);
       setSyncStep("SNIPER DEPLOYMENT INITIATED");
 
-      // Save user metrics explicitly to state snapshots
       const savedMultiplier = sellMultiplier;
       const savedFrequency = frequency;
       const savedAmount = parseFloat(dcaAmount);
@@ -279,11 +270,9 @@ export default function DashboardPage() {
 
       if (data) {
         const formattedTrades = data.map((order: any) => {
-          // Calculate deterministic values or maps using order properties
           let derivedMultiplier = "2";
           let derivedFrequency = "4";
 
-          // Use fallback স্ন্যাপশট snapshots based on order ID limits for consistency
           if (order.id % 2 === 0) {
             derivedMultiplier = "3";
             derivedFrequency = "8";
@@ -479,65 +468,6 @@ export default function DashboardPage() {
                   </div>
                   <span className="text-[10px] font-black italic group-hover:tracking-[0.2em] transition-all underline text-[#b87209]">
                     [ VIEW INTEL ]
-                  </span>
-                </button>
-              ))
-            )}
-          </div>
-        </div>
-
-        {/* VIEW 2: TERMINATED HISTORICAL INTEL ARCHIVE */}
-        <div className="mb-12">
-          <div className="flex items-center gap-4 mb-6">
-            <h2 className="text-gray-500 font-black uppercase italic tracking-[0.4em] text-xs">
-              Historical Intel Archive
-            </h2>
-            <div className="h-[1px] flex-grow bg-white/5" />
-          </div>
-          <div className="space-y-3 text-left">
-            {archivedSnipers.length === 0 ? (
-              <div className="py-8 border border-dashed border-white/5 bg-black/5 text-center">
-                <p className="text-gray-800 text-[10px] font-black uppercase italic tracking-[0.3em]">
-                  Archive Storage Clean
-                </p>
-              </div>
-            ) : (
-              archivedSnipers.map((trade) => (
-                <button
-                  key={trade.id}
-                  onClick={() => setSelectedTrade(trade)}
-                  className={`w-full flex justify-between items-center bg-[#050505]/60 backdrop-blur-sm border p-6 transition-all group ${
-                    trade.status === "ABORTED"
-                      ? "border-red-900/20 hover:border-red-900/40"
-                      : "border-green-900/20 hover:border-green-900/40"
-                  }`}
-                >
-                  <div className="text-left">
-                    <p className="text-gray-500 font-bold uppercase text-xs tracking-widest line-through">
-                      Target CA: {trade.target_contract_address.slice(0, 12)}...
-                    </p>
-                    <p
-                      className={`text-[10px] mt-1 font-mono italic ${
-                        trade.status === "ABORTED"
-                          ? "text-red-500/70"
-                          : "text-green-500/70"
-                      }`}
-                    >
-                      {trade.status === "ABORTED"
-                        ? `🚨 EMERGENCY ABORTED // POSITION TERMINATED`
-                        : `✅ TAKE-PROFIT FINALIZED: +${
-                            trade.profit_eth || "0"
-                          } ETH`}
-                    </p>
-                  </div>
-                  <span
-                    className={`text-[10px] font-black italic transition-all underline ${
-                      trade.status === "ABORTED"
-                        ? "text-red-500/60"
-                        : "text-green-500/60"
-                    }`}
-                  >
-                    [ ARCHIVE LOGS ]
                   </span>
                 </button>
               ))
