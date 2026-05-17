@@ -6,23 +6,22 @@ import { base } from "wagmi/chains";
 import { Inter } from "next/font/google";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
-import { Share2 } from "lucide-react";
 
 const inter = Inter({ subsets: ["latin"] });
 export const dynamic = "force-dynamic";
 
 interface Trade {
   id: string;
-  wallet_address: string;
-  target_contract_address: string;
-  dca_amount_eth: number;
-  lifecycle_state: string;
+  user_address: string;
+  token_to_buy: string;
+  amount_per_trade: number;
   status: string;
   tx_hash: string;
   profit_eth?: number;
+  pool_fee: number;
+  sell_multiplier: number;
+  frequency_hours: number;
   created_at?: string;
-  sell_multiplier_snapshot: string;
-  frequency_hours_snapshot: string;
 }
 
 export default function DashboardPage() {
@@ -45,10 +44,12 @@ export default function DashboardPage() {
   const [syncStep, setSyncStep] = useState("");
   const [manualHash, setManualHash] = useState("");
 
+  // Input bindings mapped to exact DB structural mutations
   const [contractAddress, setContractAddress] = useState("");
   const [dcaAmount, setDcaAmount] = useState("0.01");
   const [frequency, setFrequency] = useState("4");
   const [sellMultiplier, setSellMultiplier] = useState("2");
+  const [poolFee, setPoolFee] = useState("3000"); // Default 0.3% pool tier
 
   const supabase = useMemo(() => {
     const url = "https://acwbclupfnunoqyhjrcx.supabase.co";
@@ -61,7 +62,6 @@ export default function DashboardPage() {
     ? `https://nollywin.xyz/join?ref=${address}`
     : "";
 
-  // Only keep track of live active positions here
   const activeSnipers = useMemo(() => {
     return trades.filter(
       (t) =>
@@ -104,6 +104,7 @@ export default function DashboardPage() {
           amount: dcaAmount,
           frequency: frequency,
           multiplier: sellMultiplier,
+          pool_fee: parseInt(poolFee),
           txHash: cleanHash,
           isManualSync: true,
         }),
@@ -120,6 +121,9 @@ export default function DashboardPage() {
             amount_per_trade: parseFloat(dcaAmount),
             status: "ACTIVE_HUNTING",
             tx_hash: cleanHash,
+            pool_fee: parseInt(poolFee),
+            sell_multiplier: parseFloat(sellMultiplier),
+            frequency_hours: parseInt(frequency),
           },
         ]);
         if (dbError) throw dbError;
@@ -154,9 +158,10 @@ export default function DashboardPage() {
       setIsSyncing(true);
       setSyncStep("SNIPER DEPLOYMENT INITIATED");
 
-      const savedMultiplier = sellMultiplier;
-      const savedFrequency = frequency;
+      const savedMultiplier = parseFloat(sellMultiplier);
+      const savedFrequency = parseInt(frequency);
       const savedAmount = parseFloat(dcaAmount);
+      const savedPoolFee = parseInt(poolFee);
 
       const { error: dcaError } = await supabase.from("dca_orders").insert([
         {
@@ -165,6 +170,9 @@ export default function DashboardPage() {
           amount_per_trade: savedAmount,
           status: "PENDING",
           tx_hash: "AWAITING_HIGH_SPEED_BLOCK_SWAP",
+          pool_fee: savedPoolFee,
+          sell_multiplier: savedMultiplier,
+          frequency_hours: savedFrequency,
         },
       ]);
 
@@ -182,20 +190,19 @@ export default function DashboardPage() {
         .order("id", { ascending: false });
 
       if (data) {
-        const formattedTrades = data.map((order: any) => {
-          return {
-            id: order.id.toString(),
-            wallet_address: order.user_address,
-            target_contract_address: order.token_to_buy || "",
-            dca_amount_eth: order.amount_per_trade || savedAmount,
-            lifecycle_state: String(order.status).toUpperCase(),
-            status: order.status || "PENDING",
-            tx_hash: order.tx_hash || "AWAITING_HIGH_SPEED_BLOCK_SWAP",
-            profit_eth: order.profit_eth || 0,
-            sell_multiplier_snapshot: savedMultiplier,
-            frequency_hours_snapshot: savedFrequency,
-          };
-        });
+        const formattedTrades = data.map((order: any) => ({
+          id: order.id.toString(),
+          user_address: order.user_address,
+          token_to_buy: order.token_to_buy || "",
+          amount_per_trade: order.amount_per_trade || savedAmount,
+          status: order.status || "PENDING",
+          tx_hash: order.tx_hash || "AWAITING_HIGH_SPEED_BLOCK_SWAP",
+          profit_eth: order.profit_eth || 0,
+          pool_fee: order.pool_fee || savedPoolFee,
+          sell_multiplier: order.sell_multiplier || savedMultiplier,
+          frequency_hours: order.frequency_hours || savedFrequency,
+          created_at: order.created_at,
+        }));
         setTrades(formattedTrades);
       }
     } catch (error: any) {
@@ -269,28 +276,19 @@ export default function DashboardPage() {
         .eq("referred_by", address);
 
       if (data) {
-        const formattedTrades = data.map((order: any) => {
-          let derivedMultiplier = "2";
-          let derivedFrequency = "4";
-
-          if (order.id % 2 === 0) {
-            derivedMultiplier = "3";
-            derivedFrequency = "8";
-          }
-
-          return {
-            id: order.id.toString(),
-            wallet_address: order.user_address,
-            target_contract_address: order.token_to_buy || "",
-            dca_amount_eth: order.amount_per_trade || 0,
-            lifecycle_state: String(order.status).toUpperCase(),
-            status: order.status || "PENDING",
-            tx_hash: order.tx_hash || "AWAITING_HIGH_SPEED_BLOCK_SWAP",
-            profit_eth: order.profit_eth || 0,
-            sell_multiplier_snapshot: derivedMultiplier,
-            frequency_hours_snapshot: derivedFrequency,
-          };
-        });
+        const formattedTrades = data.map((order: any) => ({
+          id: order.id.toString(),
+          user_address: order.user_address,
+          token_to_buy: order.token_to_buy || "",
+          amount_per_trade: order.amount_per_trade || 0,
+          status: order.status || "PENDING",
+          tx_hash: order.tx_hash || "AWAITING_HIGH_SPEED_BLOCK_SWAP",
+          profit_eth: order.profit_eth || 0,
+          pool_fee: order.pool_fee || 3000,
+          sell_multiplier: order.sell_multiplier || 2,
+          frequency_hours: order.frequency_hours || 4,
+          created_at: order.created_at,
+        }));
 
         setTrades(formattedTrades);
 
@@ -365,7 +363,8 @@ export default function DashboardPage() {
                     className="w-full bg-black/50 border-b-2 border-white/10 py-3 text-xl font-mono text-white outline-none focus:border-[#b87209]"
                   />
                 </div>
-                <div className="grid grid-cols-3 gap-6 pt-4 border-t border-white/5">
+
+                <div className="grid grid-cols-2 gap-6">
                   <div>
                     <label className="text-gray-600 uppercase text-[9px] font-black block mb-2 italic">
                       Size (ETH)
@@ -375,12 +374,38 @@ export default function DashboardPage() {
                       step="0.000001"
                       value={dcaAmount}
                       onChange={(e) => setDcaAmount(e.target.value)}
-                      className="w-full bg-transparent border-b border-white/10 text-xl font-bold italic text-white outline-none"
+                      className="w-full bg-transparent border-b border-white/10 text-xl font-bold italic text-white outline-none focus:border-[#b87209]"
                     />
                   </div>
                   <div>
                     <label className="text-gray-600 uppercase text-[9px] font-black block mb-2 italic">
-                      Frequency
+                      Liquidity Pool Fee
+                    </label>
+                    <select
+                      value={poolFee}
+                      onChange={(e) => setPoolFee(e.target.value)}
+                      className="w-full bg-transparent border-b border-white/10 text-lg font-bold italic text-[#b87209] outline-none"
+                    >
+                      <option value="100" className="bg-black text-white">
+                        0.01% (100)
+                      </option>
+                      <option value="500" className="bg-black text-white">
+                        0.05% (500)
+                      </option>
+                      <option value="3000" className="bg-black text-white">
+                        0.30% (3000)
+                      </option>
+                      <option value="10000" className="bg-black text-white">
+                        1.00% (10000)
+                      </option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-6 pt-4 border-t border-white/5">
+                  <div>
+                    <label className="text-gray-600 uppercase text-[9px] font-black block mb-2 italic">
+                      Frequency Check
                     </label>
                     <select
                       value={frequency}
@@ -393,14 +418,14 @@ export default function DashboardPage() {
                           value={h.toString()}
                           className="bg-black text-white"
                         >
-                          {h}H
+                          {h} Hour Interval
                         </option>
                       ))}
                     </select>
                   </div>
                   <div>
                     <label className="text-gray-600 uppercase text-[9px] font-black block mb-2 italic">
-                      Exit Target
+                      Exit Target Multiplier
                     </label>
                     <select
                       value={sellMultiplier}
@@ -413,13 +438,14 @@ export default function DashboardPage() {
                           value={m.toString()}
                           className="bg-black text-white"
                         >
-                          {m}X
+                          {m}X Profit Target
                         </option>
                       ))}
                     </select>
                   </div>
                 </div>
               </div>
+
               <div className="flex flex-col items-center justify-center lg:border-l lg:border-white/5 lg:pl-12">
                 <button
                   onClick={handleTradeAction}
@@ -459,11 +485,12 @@ export default function DashboardPage() {
                 >
                   <div className="text-left">
                     <p className="text-white font-bold uppercase text-xs tracking-widest">
-                      Target CA: {trade.target_contract_address.slice(0, 12)}...
+                      Target CA: {trade.token_to_buy.slice(0, 12)}...
                     </p>
                     <p className="text-[10px] mt-1 font-mono italic text-gray-400">
-                      STATUS: {trade.status} | MONITORING {trade.dca_amount_eth}{" "}
-                      ETH
+                      STATUS: {trade.status} | DEPLOYED:{" "}
+                      {trade.amount_per_trade} ETH | POOL: Tier (
+                      {trade.pool_fee})
                     </p>
                   </div>
                   <span className="text-[10px] font-black italic group-hover:tracking-[0.2em] transition-all underline text-[#b87209]">
@@ -497,7 +524,7 @@ export default function DashboardPage() {
                       Target Asset Contract
                     </label>
                     <p className="text-white text-xs truncate font-mono select-all bg-black/30 p-2 border border-white/5 rounded-sm">
-                      {selectedTrade.target_contract_address}
+                      {selectedTrade.token_to_buy}
                     </p>
                   </div>
                   <div>
@@ -519,33 +546,58 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-6 border-b border-white/5 pb-6 text-left">
+                <div className="grid grid-cols-4 gap-4 border-b border-white/5 pb-6 text-left">
                   <div>
                     <p className="text-gray-500 text-[9px] uppercase font-black italic mb-1 tracking-wider">
                       Allocation Size
                     </p>
-                    <p className="text-white text-base font-black italic font-mono">
-                      {selectedTrade.dca_amount_eth}{" "}
-                      <span className="text-[#b87209] text-xs">ETH</span>
+                    <p className="text-white text-sm font-black italic font-mono">
+                      {selectedTrade.amount_per_trade}{" "}
+                      <span className="text-[#b87209] text-[10px]">ETH</span>
                     </p>
                   </div>
                   <div>
                     <p className="text-gray-500 text-[9px] uppercase font-black italic mb-1 tracking-wider">
-                      Exit Multiplier
+                      Exit Target
                     </p>
-                    <p className="text-[#b87209] text-base font-black italic font-mono">
-                      {selectedTrade.sell_multiplier_snapshot}X
+                    <p className="text-[#b87209] text-sm font-black italic font-mono">
+                      {selectedTrade.sell_multiplier}X
                     </p>
                   </div>
                   <div>
                     <p className="text-gray-500 text-[9px] uppercase font-black italic mb-1 tracking-wider">
                       Block Cycle
                     </p>
-                    <p className="text-white text-sm font-bold font-mono uppercase bg-white/5 px-2 py-1 rounded-sm text-center inline-block">
-                      {selectedTrade.frequency_hours_snapshot}H Int.
+                    <p className="text-white text-xs font-bold font-mono uppercase bg-white/5 px-2 py-1 rounded-sm text-center inline-block">
+                      {selectedTrade.frequency_hours}H Int.
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500 text-[9px] uppercase font-black italic mb-1 tracking-wider">
+                      DEX Pool Fee
+                    </p>
+                    <p className="text-white text-xs font-bold font-mono uppercase bg-white/5 px-2 py-1 rounded-sm text-center inline-block">
+                      {selectedTrade.pool_fee}
                     </p>
                   </div>
                 </div>
+
+                {selectedTrade.profit_eth !== undefined && (
+                  <div className="border-b border-white/5 pb-6">
+                    <label className="text-gray-500 text-[9px] uppercase font-black italic mb-1 tracking-wider block">
+                      Realized Profit PnL
+                    </label>
+                    <p
+                      className={`text-xl font-bold font-mono ${
+                        selectedTrade.profit_eth > 0
+                          ? "text-green-500"
+                          : "text-gray-400"
+                      }`}
+                    >
+                      {selectedTrade.profit_eth} ETH
+                    </p>
+                  </div>
+                )}
 
                 <div className="border-b border-white/5 pb-8">
                   <label className="text-[#b87209] text-[10px] uppercase font-black italic mb-2 tracking-widest block">

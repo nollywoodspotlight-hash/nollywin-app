@@ -28,13 +28,13 @@ export async function POST(req: Request) {
     }
 
     console.log(
-      `🚨 API OVERRIDE PROTOCOL: Requesting emergency dump for Order #${tradeId}`,
+      `🚨 API OVERRIDE PROTOCOL: Requesting emergency shutdown for Sniper Order #${tradeId}`,
     );
 
-    // 📡 UPDATE CORE TABLE: Flip status to ABORT_REQUESTED for the active user wallet address
+    // 📡 UPDATE CORE TABLE: Update status string directly to state-machine standard 'ABORTED'
     const { data: updatedData, error: updateError } = await supabase
       .from("dca_orders")
-      .update({ status: "ABORT_REQUESTED" })
+      .update({ status: "ABORTED" })
       .eq("id", tradeId)
       .eq("user_address", wallet_address)
       .select();
@@ -47,7 +47,7 @@ export async function POST(req: Request) {
     // Verify a row was actually matched and updated in the query bounds
     if (!updatedData || updatedData.length === 0) {
       console.warn(
-        `❌ Abort targets skipped: No pending match for order #${tradeId} and user ${wallet_address}`,
+        `❌ Abort targets skipped: No match found for sniper order #${tradeId} linked to wallet ${wallet_address}`,
       );
       return NextResponse.json(
         { error: "Trade target matching profile unviable" },
@@ -56,12 +56,13 @@ export async function POST(req: Request) {
     }
 
     console.log(
-      `🧨 Kill Switch Activated: Order #${tradeId} set to ABORT_REQUESTED.`,
+      `🧨 Kill Switch Activated: Sniper Order #${tradeId} hard status updated to ABORTED.`,
     );
 
     return NextResponse.json({
       success: true,
-      message: "Emergency abort state broadcasted to real-time backend engine.",
+      message:
+        "Emergency abort state broadcasted to real-time database architecture.",
     });
   } catch (error: any) {
     console.error("❌ Abort API Route Failure:", error.message);
