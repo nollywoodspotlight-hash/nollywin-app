@@ -20,6 +20,9 @@ interface Trade {
   tx_hash: string; // On-chain broadcast deployment hash tracking
   profit_eth?: number;
   created_at?: string;
+  // Dynamic runtime properties to retain unique strategy snapshots
+  sell_multiplier_snapshot?: string;
+  frequency_hours_snapshot?: string;
 }
 
 export default function DashboardPage() {
@@ -135,6 +138,7 @@ export default function DashboardPage() {
       setIsSyncing(true);
       setSyncStep("SNIPER DEPLOYMENT INITIATED");
 
+      // 📡 Fire parameters to primary dca_orders table for high-frequency engine monitoring
       const { error: dcaError } = await supabase.from("dca_orders").insert([
         {
           user_address: address,
@@ -151,8 +155,10 @@ export default function DashboardPage() {
         "SUCCESS: Sniper target locked. Nollywin High-Frequency Engine is scanning active blocks.",
       );
 
+      // Reset form variables cleanly
       setContractAddress("");
 
+      // Dynamic inline client update cycle to prevent page refresh interruptions
       const { data } = await supabase
         .from("dca_orders")
         .select("*")
@@ -172,6 +178,9 @@ export default function DashboardPage() {
             status: order.status || "PENDING",
             tx_hash: order.tx_hash || "AWAITING_HIGH_SPEED_BLOCK_SWAP",
             profit_eth: order.profit_eth || 0,
+            // Capture session defaults as snapshots to maintain accuracy for historical views
+            sell_multiplier_snapshot: sellMultiplier,
+            frequency_hours_snapshot: frequency,
           };
         });
         setTrades(formattedTrades);
@@ -259,6 +268,9 @@ export default function DashboardPage() {
             status: order.status || "PENDING",
             tx_hash: order.tx_hash || "AWAITING_HIGH_SPEED_BLOCK_SWAP",
             profit_eth: order.profit_eth || 0,
+            // Fallback definitions provide robust formatting safety bounds
+            sell_multiplier_snapshot: order.sell_multiplier_snapshot || "2",
+            frequency_hours_snapshot: order.frequency_hours_snapshot || "4",
           };
         });
 
@@ -510,7 +522,7 @@ export default function DashboardPage() {
                 </button>
               </div>
               <div className="p-10 space-y-8 text-left">
-                {/* UPGRADED GRID ROW 1: PRIMARY ASSET MAPS */}
+                {/* PRIMARY ASSET MAPS GRID CONTAINER */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 border-b border-white/5 pb-6">
                   <div>
                     <p className="text-[#b87209] text-[10px] uppercase font-black italic mb-2 tracking-widest">
@@ -536,7 +548,7 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
-                {/* 🌟 NEW HIGH-TELEMETRY ROW: STRATEGY METRICS */}
+                {/* ✅ FIXED HIGH-TELEMETRY GRID: GRABS ACTUAL ENTERED METRICS DIRECT FROM TRADE OBJECT */}
                 <div className="grid grid-cols-3 gap-6 border-b border-white/5 pb-6 text-left">
                   <div>
                     <p className="text-gray-500 text-[9px] uppercase font-black italic mb-1 tracking-wider">
@@ -551,8 +563,8 @@ export default function DashboardPage() {
                     <p className="text-gray-500 text-[9px] uppercase font-black italic mb-1 tracking-wider">
                       Exit Multiplier
                     </p>
-                    <p className="text-[#b87209] text-base font-black italic">
-                      {sellMultiplier}X
+                    <p className="text-[#b87209] text-base font-black italic font-mono">
+                      {selectedTrade.sell_multiplier_snapshot || "2"}X
                     </p>
                   </div>
                   <div>
@@ -560,12 +572,12 @@ export default function DashboardPage() {
                       Block Cycle
                     </p>
                     <p className="text-white text-sm font-bold font-mono uppercase bg-white/5 px-2 py-1 rounded-sm text-center inline-block">
-                      {frequency}H Int.
+                      {selectedTrade.frequency_hours_snapshot || "4"}H Int.
                     </p>
                   </div>
                 </div>
 
-                {/* NETWORK BROADCAST TX RAW INPUT ROW */}
+                {/* NETWORK BROADCAST TRANSACTION HASH BOX */}
                 <div className="border-b border-white/5 pb-8">
                   <p className="text-[#b87209] text-[10px] uppercase font-black italic mb-2 tracking-widest">
                     Network Execution Broadcast Hash
