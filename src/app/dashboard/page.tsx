@@ -6,6 +6,7 @@ import { base } from "wagmi/chains";
 import { Inter } from "next/font/google";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
+import { Share2 } from "lucide-react"; // Added for cinematic sharing iconography
 
 const inter = Inter({ subsets: ["latin"] });
 export const dynamic = "force-dynamic";
@@ -15,12 +16,11 @@ interface Trade {
   wallet_address: string;
   target_contract_address: string;
   dca_amount_eth: number;
-  lifecycle_state: string; // Internal visual card mapping state
-  status: string; // Direct production table tracking status (PENDING, COMPLETED)
-  tx_hash: string; // On-chain broadcast deployment hash tracking
+  lifecycle_state: string; // ACTIVE, COMPLETED, ABORTED
+  status: string;
+  tx_hash: string;
   profit_eth?: number;
   created_at?: string;
-  // Dynamic runtime properties to retain unique strategy snapshots
   sell_multiplier_snapshot?: string;
   frequency_hours_snapshot?: string;
 }
@@ -33,7 +33,7 @@ export default function DashboardPage() {
   const router = useRouter();
 
   // --- STATE ---
-  const [mounted, setMounted] = useState(false); // Fixes Client Hydration mismatches
+  const [mounted, setMounted] = useState(false);
   const [trades, setTrades] = useState<Trade[]>([]);
   const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
   const [referralCount, setReferralCount] = useState(0);
@@ -61,7 +61,36 @@ export default function DashboardPage() {
     ? `https://nollywin.xyz/join?ref=${address}`
     : "";
 
+  // 📡 Filter Trades Array in memory for distinct presentation views
+  const activeSnipers = useMemo(() => {
+    return trades.filter(
+      (t) =>
+        t.status === "PENDING" ||
+        t.status === "ACTIVE_HUNTING" ||
+        t.status === "TRACKING_PROFIT",
+    );
+  }, [trades]);
+
+  const archivedSnipers = useMemo(() => {
+    return trades.filter(
+      (t) =>
+        t.status === "COMPLETED" ||
+        t.status === "ABORTED" ||
+        t.status === "FAILED",
+    );
+  }, [trades]);
+
   // --- HANDLERS ---
+
+  const handleShareReferralX = () => {
+    const ctaText = `🎬 Just fired up the @NollyWin parallel sniper engine on Base Mainnet. Zero-delay block execution targets are locked. Grab your onboarding crew pass and track live allocations here:`;
+    window.open(
+      `https://twitter.com/intent/tweet?text=${encodeURIComponent(
+        ctaText,
+      )}&url=${encodeURIComponent(referralLink)}`,
+      "_blank",
+    );
+  };
 
   const handleManualSync = async () => {
     const cleanHash = manualHash.trim();
@@ -93,7 +122,6 @@ export default function DashboardPage() {
         window.location.reload();
       } else {
         if (!supabase) throw new Error("Database client not initialized");
-
         const { error: dbError } = await supabase.from("dca_orders").insert([
           {
             user_address: address,
@@ -116,19 +144,16 @@ export default function DashboardPage() {
 
   const handleTradeAction = async (e: React.MouseEvent) => {
     e.preventDefault();
-
     if (contractAddress.length < 42 || !contractAddress.startsWith("0x")) {
       alert(
         "Invalid Target CA. Please input a complete 42-character Ethereum address.",
       );
       return;
     }
-
     if (chain?.id !== base.id) {
       switchChain?.({ chainId: base.id });
       return;
     }
-
     if (!supabase) {
       alert("Central database connection protocol offline.");
       return;
@@ -138,7 +163,6 @@ export default function DashboardPage() {
       setIsSyncing(true);
       setSyncStep("SNIPER DEPLOYMENT INITIATED");
 
-      // 📡 Fire parameters to primary dca_orders table for high-frequency engine monitoring
       const { error: dcaError } = await supabase.from("dca_orders").insert([
         {
           user_address: address,
@@ -154,11 +178,8 @@ export default function DashboardPage() {
       alert(
         "SUCCESS: Sniper target locked. Nollywin High-Frequency Engine is scanning active blocks.",
       );
-
-      // Reset form variables cleanly
       setContractAddress("");
 
-      // Dynamic inline client update cycle to prevent page refresh interruptions
       const { data } = await supabase
         .from("dca_orders")
         .select("*")
@@ -167,18 +188,15 @@ export default function DashboardPage() {
 
       if (data) {
         const formattedTrades = data.map((order: any) => {
-          const currentStatus = String(order.status || "").toUpperCase();
           return {
             id: order.id.toString(),
             wallet_address: order.user_address,
             target_contract_address: order.token_to_buy || "",
             dca_amount_eth: order.amount_per_trade || 0,
-            lifecycle_state:
-              currentStatus === "COMPLETED" ? "COMPLETED" : "ACTIVE",
+            lifecycle_state: String(order.status).toUpperCase(),
             status: order.status || "PENDING",
             tx_hash: order.tx_hash || "AWAITING_HIGH_SPEED_BLOCK_SWAP",
             profit_eth: order.profit_eth || 0,
-            // Capture session defaults as snapshots to maintain accuracy for historical views
             sell_multiplier_snapshot: sellMultiplier,
             frequency_hours_snapshot: frequency,
           };
@@ -231,7 +249,7 @@ export default function DashboardPage() {
   // --- EFFECTS ---
 
   useEffect(() => {
-    setMounted(true); // Registers client paint completion
+    setMounted(true);
   }, []);
 
   useEffect(() => {
@@ -244,7 +262,7 @@ export default function DashboardPage() {
     async function syncDashboard() {
       if (!address || !supabase) return;
 
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from("dca_orders")
         .select("*")
         .eq("user_address", address)
@@ -257,18 +275,15 @@ export default function DashboardPage() {
 
       if (data) {
         const formattedTrades = data.map((order: any) => {
-          const currentStatus = String(order.status || "").toUpperCase();
           return {
             id: order.id.toString(),
             wallet_address: order.user_address,
             target_contract_address: order.token_to_buy || "",
             dca_amount_eth: order.amount_per_trade || 0,
-            lifecycle_state:
-              currentStatus === "COMPLETED" ? "COMPLETED" : "ACTIVE",
+            lifecycle_state: String(order.status).toUpperCase(),
             status: order.status || "PENDING",
             tx_hash: order.tx_hash || "AWAITING_HIGH_SPEED_BLOCK_SWAP",
             profit_eth: order.profit_eth || 0,
-            // Fallback definitions provide robust formatting safety bounds
             sell_multiplier_snapshot: order.sell_multiplier_snapshot || "2",
             frequency_hours_snapshot: order.frequency_hours_snapshot || "4",
           };
@@ -277,29 +292,22 @@ export default function DashboardPage() {
         setTrades(formattedTrades);
 
         const active = data.some(
-          (s: any) => String(s.status || "").toUpperCase() === "PENDING",
-        );
-        const completed = data.some(
-          (s: any) => String(s.status || "").toUpperCase() === "COMPLETED",
+          (s: any) =>
+            s.status === "PENDING" ||
+            s.status === "ACTIVE_HUNTING" ||
+            s.status === "TRACKING_PROFIT",
         );
         const profit = data.some((s: any) => (s.profit_eth || 0) > 0);
 
-        setIsCurrentlyActive(active || completed);
+        setIsCurrentlyActive(active);
         setHasRealizedProfit(profit);
-
-        if (active) {
-          setIsTradeActive(true);
-        } else {
-          setIsTradeActive(false);
-        }
+        setIsTradeActive(active);
       }
-
       if (count !== null) setReferralCount(count);
     }
     if (mounted) syncDashboard();
   }, [address, supabase, mounted]);
 
-  // Prevent server-side render until client context is mounted
   if (!mounted || !isConnected) return null;
 
   return (
@@ -309,7 +317,7 @@ export default function DashboardPage() {
       <div className="fixed inset-0 bg-[radial-gradient(circle_at_50%_10%,rgba(184,114,9,0.1),transparent_60%)] pointer-events-none z-[1]" />
 
       <div className="relative z-50 max-w-5xl mx-auto px-4 pt-32 pb-20">
-        <div className="border-l-4 border-[#b87209] pl-6 mb-12 italic text-left">
+        <div className="border-l-4 border-[#b87209] pl-6 mb-12 text-left italic">
           <h1 className="text-4xl md:text-7xl font-black uppercase tracking-tighter leading-none">
             Production <span className="text-[#b87209]">Dashboard</span>
           </h1>
@@ -318,6 +326,7 @@ export default function DashboardPage() {
           </p>
         </div>
 
+        {/* SNIPER WORKSPACE EDITOR MODULE */}
         <div className="bg-[#080808]/90 backdrop-blur-sm border border-[#b87209]/40 shadow-2xl mb-12">
           <div className="bg-[#b87209]/10 border-b border-[#b87209]/20 px-6 py-3 flex justify-between items-center">
             <span className="text-[10px] font-black uppercase tracking-widest italic text-[#b87209]">
@@ -325,14 +334,14 @@ export default function DashboardPage() {
             </span>
             <span
               className={`text-[10px] font-black uppercase italic ${
-                trades.some((t) => t.status === "PENDING")
+                activeSnipers.length > 0
                   ? "text-green-500 font-mono tracking-widest"
                   : "text-red-500"
               }`}
             >
               {isSyncing
-                ? `● ${syncStep || "LOCKING TARGET"}`
-                : trades.some((t) => t.status === "PENDING")
+                ? `● ${syncStep}`
+                : activeSnipers.length > 0
                 ? "● SNIPER ACTIVE (LISTENING H-F BLOCKS)"
                 : "● STANDBY"}
             </span>
@@ -423,83 +432,39 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="mb-12 bg-[#080808]/80 backdrop-blur-sm border border-[#b87209]/30 p-6 flex flex-col md:flex-row gap-4 items-center rounded-sm shadow-xl">
-          <div className="text-left flex-grow">
-            <h4 className="text-[#b87209] text-[11px] font-black uppercase italic tracking-widest">
-              Protocol Recovery
-            </h4>
-            <p className="text-gray-500 text-[8px] uppercase font-bold italic mt-1">
-              Paste Hash to claim trade if it didn&apos;t appear.
-            </p>
-          </div>
-          <input
-            type="text"
-            placeholder="0x... (Hash)"
-            value={manualHash}
-            onChange={(e) => setManualHash(e.target.value)}
-            className="bg-black border border-white/10 px-4 py-3 text-[11px] font-mono text-[#b87209] w-full md:w-96 outline-none focus:border-[#b87209]/60"
-          />
-          <button
-            onClick={handleManualSync}
-            className="whitespace-nowrap px-8 py-3 bg-[#b87209] text-black text-[10px] font-black uppercase italic hover:bg-white transition-all"
-          >
-            Claim Production
-          </button>
-        </div>
-
+        {/* VIEW 1: LIVE SNIPER MONITORING FEED */}
         <div className="mb-12">
-          <div className="flex items-center gap-4 mb-8">
+          <div className="flex items-center gap-4 mb-6">
             <h2 className="text-[#b87209] font-black uppercase italic tracking-[0.4em] text-xs">
               Live Sniper Feed
             </h2>
             <div className="h-[1px] flex-grow bg-white/5" />
           </div>
           <div className="space-y-3 text-left">
-            {trades.length === 0 ? (
+            {activeSnipers.length === 0 ? (
               <div className="py-12 border border-dashed border-white/10 bg-black/20 text-center">
                 <p className="text-gray-700 text-[10px] font-black uppercase italic tracking-[0.3em]">
                   No Active Positions Monitored
                 </p>
               </div>
             ) : (
-              trades.map((trade) => (
+              activeSnipers.map((trade) => (
                 <button
                   key={trade.id}
                   onClick={() => setSelectedTrade(trade)}
-                  className={`w-full flex justify-between items-center bg-[#080808]/90 backdrop-blur-sm border p-6 transition-all group ${
-                    trade.lifecycle_state === "COMPLETED"
-                      ? "border-green-500/20 shadow-[0_0_15px_rgba(34,197,94,0.05)]"
-                      : "border-white/5 hover:border-[#b87209]/50"
-                  }`}
+                  className="w-full flex justify-between items-center bg-[#080808]/90 backdrop-blur-sm border border-white/5 p-6 transition-all group hover:border-[#b87209]/50"
                 >
                   <div className="text-left">
                     <p className="text-white font-bold uppercase text-xs tracking-widest">
                       Target CA: {trade.target_contract_address.slice(0, 12)}...
                     </p>
-                    <p
-                      className={`text-[10px] mt-1 font-mono italic ${
-                        trade.lifecycle_state === "COMPLETED"
-                          ? "text-green-500"
-                          : "text-gray-600"
-                      }`}
-                    >
-                      {trade.lifecycle_state === "COMPLETED"
-                        ? `PROFIT ARCHIVED: +${trade.profit_eth || "0"} ETH`
-                        : `SCANNING BLOCKS: ${trade.dca_amount_eth} ETH`}
+                    <p className="text-[10px] mt-1 font-mono italic text-gray-400">
+                      STATUS: {trade.status} | MONITORING {trade.dca_amount_eth}{" "}
+                      ETH
                     </p>
                   </div>
-                  <span
-                    className={`text-[10px] font-black italic group-hover:tracking-[0.2em] transition-all underline ${
-                      trade.lifecycle_state === "COMPLETED"
-                        ? "text-green-500"
-                        : "text-[#b87209]"
-                    }`}
-                  >
-                    [{" "}
-                    {trade.lifecycle_state === "COMPLETED"
-                      ? "INTEL ARCHIVE"
-                      : "VIEW TARGET INTEL"}{" "}
-                    ]
+                  <span className="text-[10px] font-black italic group-hover:tracking-[0.2em] transition-all underline text-[#b87209]">
+                    [ VIEW INTEL ]
                   </span>
                 </button>
               ))
@@ -507,6 +472,66 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {/* VIEW 2: TERMINATED HISTORICAL INTEL ARCHIVE */}
+        <div className="mb-12">
+          <div className="flex items-center gap-4 mb-6">
+            <h2 className="text-gray-500 font-black uppercase italic tracking-[0.4em] text-xs">
+              Historical Intel Archive
+            </h2>
+            <div className="h-[1px] flex-grow bg-white/5" />
+          </div>
+          <div className="space-y-3 text-left">
+            {archivedSnipers.length === 0 ? (
+              <div className="py-8 border border-dashed border-white/5 bg-black/5 text-center">
+                <p className="text-gray-800 text-[10px] font-black uppercase italic tracking-[0.3em]">
+                  Archive Storage Clean
+                </p>
+              </div>
+            ) : (
+              archivedSnipers.map((trade) => (
+                <button
+                  key={trade.id}
+                  onClick={() => setSelectedTrade(trade)}
+                  className={`w-full flex justify-between items-center bg-[#050505]/60 backdrop-blur-sm border p-6 transition-all group ${
+                    trade.status === "ABORTED"
+                      ? "border-red-900/20 hover:border-red-900/40"
+                      : "border-green-900/20 hover:border-green-900/40"
+                  }`}
+                >
+                  <div className="text-left">
+                    <p className="text-gray-500 font-bold uppercase text-xs tracking-widest line-through">
+                      Target CA: {trade.target_contract_address.slice(0, 12)}...
+                    </p>
+                    <p
+                      className={`text-[10px] mt-1 font-mono italic ${
+                        trade.status === "ABORTED"
+                          ? "text-red-500/70"
+                          : "text-green-500/70"
+                      }`}
+                    >
+                      {trade.status === "ABORTED"
+                        ? `🚨 EMERGENCY ABORTED // POSITION TERMINATED`
+                        : `✅ TAKE-PROFIT FINALIZED: +${
+                            trade.profit_eth || "0"
+                          } ETH`}
+                    </p>
+                  </div>
+                  <span
+                    className={`text-[10px] font-black italic transition-all underline ${
+                      trade.status === "ABORTED"
+                        ? "text-red-500/60"
+                        : "text-green-500/60"
+                    }`}
+                  >
+                    [ ARCHIVE LOGS ]
+                  </span>
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* HIGH-TELEMETRY DETAILED MODAL VIEWER */}
         {selectedTrade && (
           <div className="fixed inset-0 z-[300] flex items-center justify-center p-6 bg-black/95 backdrop-blur-md">
             <div className="w-full max-w-2xl bg-[#080808] border-2 border-[#b87209] shadow-2xl">
@@ -522,24 +547,25 @@ export default function DashboardPage() {
                 </button>
               </div>
               <div className="p-10 space-y-8 text-left">
-                {/* PRIMARY ASSET MAPS GRID CONTAINER */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 border-b border-white/5 pb-6">
                   <div>
-                    <p className="text-[#b87209] text-[10px] uppercase font-black italic mb-2 tracking-widest">
+                    <label className="text-[#b87209] text-[10px] uppercase font-black italic mb-2 tracking-widest block">
                       Target Asset Contract
-                    </p>
+                    </label>
                     <p className="text-white text-xs truncate font-mono select-all bg-black/30 p-2 border border-white/5 rounded-sm">
                       {selectedTrade.target_contract_address}
                     </p>
                   </div>
                   <div>
-                    <p className="text-[#b87209] text-[10px] uppercase font-black italic mb-2 tracking-widest">
-                      On-Chain Pipeline State
-                    </p>
+                    <label className="text-[#b87209] text-[10px] uppercase font-black italic mb-2 tracking-widest block">
+                      Pipeline State
+                    </label>
                     <p
                       className={`text-xs uppercase font-black italic tracking-wider p-2 border rounded-sm inline-block ${
-                        selectedTrade.lifecycle_state === "COMPLETED"
+                        selectedTrade.status === "COMPLETED"
                           ? "text-green-500 border-green-500/20 bg-green-500/5"
+                          : selectedTrade.status === "ABORTED"
+                          ? "text-red-500 border-red-500/20 bg-red-500/5"
                           : "text-[#b87209] border-[#b87209]/20 bg-[#b87209]/5"
                       }`}
                     >
@@ -548,7 +574,6 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
-                {/* ✅ FIXED HIGH-TELEMETRY GRID: GRABS ACTUAL ENTERED METRICS DIRECT FROM TRADE OBJECT */}
                 <div className="grid grid-cols-3 gap-6 border-b border-white/5 pb-6 text-left">
                   <div>
                     <p className="text-gray-500 text-[9px] uppercase font-black italic mb-1 tracking-wider">
@@ -577,17 +602,18 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
-                {/* NETWORK BROADCAST TRANSACTION HASH BOX */}
                 <div className="border-b border-white/5 pb-8">
-                  <p className="text-[#b87209] text-[10px] uppercase font-black italic mb-2 tracking-widest">
-                    Network Execution Broadcast Hash
-                  </p>
+                  <label className="text-[#b87209] text-[10px] uppercase font-black italic mb-2 tracking-widest block">
+                    Network Broadcast Hash
+                  </label>
                   <p className="text-gray-400 text-xs font-mono select-all break-all bg-black/40 p-3 border border-white/5 rounded-sm tracking-tighter">
                     {selectedTrade.tx_hash}
                   </p>
                 </div>
 
-                {selectedTrade.status === "PENDING" && (
+                {(selectedTrade.status === "PENDING" ||
+                  selectedTrade.status === "ACTIVE_HUNTING" ||
+                  selectedTrade.status === "TRACKING_PROFIT") && (
                   <button
                     onClick={() => handleAbortTrade(selectedTrade)}
                     className="w-full py-8 bg-red-600 hover:bg-red-700 text-white font-black uppercase italic text-2xl tracking-tighter transition-all active:scale-95 shadow-lg"
@@ -600,14 +626,20 @@ export default function DashboardPage() {
           </div>
         )}
 
+        {/* UPGRADED PROTOCOL CREW AND DYNAMIC SHARE CTA LAYOUT ELEMENTS */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
-          <div className="md:col-span-2 bg-[#080808]/90 backdrop-blur-sm border border-white/5 p-10">
+          <div className="md:col-span-2 bg-[#080808]/90 backdrop-blur-sm border border-white/5 p-10 flex flex-col justify-between">
             <div className="flex justify-between items-start mb-6">
-              <h3 className="text-[#b87209] uppercase font-black tracking-widest text-xs italic underline decoration-white/10 underline-offset-8">
-                Production Crew
-              </h3>
+              <div>
+                <h3 className="text-[#b87209] uppercase font-black tracking-widest text-xs italic underline decoration-white/10 underline-offset-8">
+                  Production Crew
+                </h3>
+                <p className="text-gray-500 text-[8px] uppercase tracking-wider font-bold italic mt-2">
+                  Invite new pilots to capture passive overrides
+                </p>
+              </div>
               <div className="text-right">
-                <p className="text-[#b87209] font-black italic text-[10px] uppercase text-right">
+                <p className="text-[#b87209] font-black italic text-[10px] uppercase">
                   Headcount
                 </p>
                 <p className="text-white font-black text-3xl italic leading-none">
@@ -615,18 +647,32 @@ export default function DashboardPage() {
                 </p>
               </div>
             </div>
-            <div className="flex border border-[#b87209]/40 mt-4">
-              <div className="flex-grow bg-black p-5 font-mono text-[10px] text-[#b87209] truncate italic">
-                {referralLink}
+
+            {/* 🌟 ACTION SECTIONS: SPLIT LAYOUT FOR COPYING AND SOCIAL BROADCASTING */}
+            <div className="space-y-3 mt-4">
+              <div className="flex border border-[#b87209]/40 bg-black">
+                <div className="flex-grow p-4 font-mono text-[10px] text-[#b87209] truncate italic">
+                  {referralLink}
+                </div>
+                <button
+                  onClick={handleCopy}
+                  className="bg-[#b87209] hover:bg-white text-black px-8 font-black uppercase text-[10px] italic transition-colors"
+                >
+                  {copied ? "COPIED" : "COPY LINK"}
+                </button>
               </div>
+
+              {/* Added high-converting viral share CTA trigger */}
               <button
-                onClick={handleCopy}
-                className="bg-[#b87209] hover:bg-white text-black px-8 font-black uppercase text-[10px] italic transition-colors"
+                onClick={handleShareReferralX}
+                className="w-full flex items-center justify-center gap-2 border-2 border-[#b87209] hover:bg-[#b87209] text-[#b87209] hover:text-black py-3 px-4 font-black text-[10px] uppercase italic tracking-wider transition-all duration-300 active:scale-95"
               >
-                {copied ? "COPIED" : "COPY"}
+                <Share2 size={12} />
+                Broadcast Referral Pass to X
               </button>
             </div>
           </div>
+
           <div
             className={`border-2 p-8 flex flex-col justify-center text-center backdrop-blur-sm ${
               royaltiesEnabled
