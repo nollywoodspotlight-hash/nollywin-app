@@ -58,9 +58,6 @@ export default function DashboardPage() {
     ? `https://nollywin.xyz/join?ref=${address}`
     : "";
 
-  // --- STANDARD ASSET CONTRACT DEFINITIONS ---
-  const WETH_ADDRESS = "0x4200000000000000000000000000000000000006";
-
   // --- HANDLERS ---
 
   const handleManualSync = async () => {
@@ -93,13 +90,15 @@ export default function DashboardPage() {
         window.location.reload();
       } else {
         if (!supabase) throw new Error("Database client not initialized");
-        const { error: dbError } = await supabase.from("strategies").insert([
+
+        // Use primary DCA orders tracking table directly to bypass uuid parsing block entirely
+        const { error: dbError } = await supabase.from("dca_orders").insert([
           {
-            user_id: address,
-            token_in: WETH_ADDRESS,
-            token_out: recoveryCA,
-            amount_per_swap: parseFloat(dcaAmount),
-            status: "ACTIVE",
+            user_address: address,
+            token_to_buy: recoveryCA,
+            amount_per_trade: parseFloat(dcaAmount),
+            status: "ACTIVE_HUNTING",
+            tx_hash: cleanHash,
           },
         ]);
         if (dbError) throw dbError;
@@ -137,7 +136,7 @@ export default function DashboardPage() {
       setIsSyncing(true);
       setSyncStep("SNIPER DEPLOYMENT INITIATED");
 
-      // 📡 1. Fire parameters to primary dca_orders table for high-frequency engine monitoring
+      // 📡 Fire parameters to primary dca_orders table for high-frequency engine monitoring
       const { error: dcaError } = await supabase.from("dca_orders").insert([
         {
           user_address: address,
@@ -149,21 +148,6 @@ export default function DashboardPage() {
       ]);
 
       if (dcaError) throw dcaError;
-
-      // 💾 2. Sync parameters cleanly to strategies table matching your exact column modifications
-      const { error: strategyError } = await supabase
-        .from("strategies")
-        .insert([
-          {
-            user_id: address,
-            token_in: WETH_ADDRESS,
-            token_out: contractAddress.trim(),
-            amount_per_swap: parseFloat(dcaAmount),
-            status: "ACTIVE",
-          },
-        ]);
-
-      if (strategyError) throw strategyError;
 
       alert(
         "SUCCESS: Sniper target locked. Nollywin High-Frequency Engine is scanning active blocks.",
