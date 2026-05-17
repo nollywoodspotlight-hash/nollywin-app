@@ -91,7 +91,6 @@ export default function DashboardPage() {
       } else {
         if (!supabase) throw new Error("Database client not initialized");
 
-        // Use primary DCA orders tracking table directly to bypass uuid parsing block entirely
         const { error: dbError } = await supabase.from("dca_orders").insert([
           {
             user_address: address,
@@ -136,7 +135,6 @@ export default function DashboardPage() {
       setIsSyncing(true);
       setSyncStep("SNIPER DEPLOYMENT INITIATED");
 
-      // 📡 Fire parameters to primary dca_orders table for high-frequency engine monitoring
       const { error: dcaError } = await supabase.from("dca_orders").insert([
         {
           user_address: address,
@@ -153,10 +151,8 @@ export default function DashboardPage() {
         "SUCCESS: Sniper target locked. Nollywin High-Frequency Engine is scanning active blocks.",
       );
 
-      // Clear input text block immediately to keep workflow unlocked and responsive
       setContractAddress("");
 
-      // Refresh local streaming metrics in client memory without flash-reloading the window context
       const { data } = await supabase
         .from("dca_orders")
         .select("*")
@@ -514,7 +510,8 @@ export default function DashboardPage() {
                 </button>
               </div>
               <div className="p-10 space-y-8 text-left">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 border-b border-white/5 pb-8">
+                {/* UPGRADED GRID ROW 1: PRIMARY ASSET MAPS */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 border-b border-white/5 pb-6">
                   <div>
                     <p className="text-[#b87209] text-[10px] uppercase font-black italic mb-2 tracking-widest">
                       Target Asset Contract
@@ -539,6 +536,36 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
+                {/* 🌟 NEW HIGH-TELEMETRY ROW: STRATEGY METRICS */}
+                <div className="grid grid-cols-3 gap-6 border-b border-white/5 pb-6 text-left">
+                  <div>
+                    <p className="text-gray-500 text-[9px] uppercase font-black italic mb-1 tracking-wider">
+                      Allocation Size
+                    </p>
+                    <p className="text-white text-base font-black italic font-mono">
+                      {selectedTrade.dca_amount_eth}{" "}
+                      <span className="text-[#b87209] text-xs">ETH</span>
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500 text-[9px] uppercase font-black italic mb-1 tracking-wider">
+                      Exit Multiplier
+                    </p>
+                    <p className="text-[#b87209] text-base font-black italic">
+                      {sellMultiplier}X
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500 text-[9px] uppercase font-black italic mb-1 tracking-wider">
+                      Block Cycle
+                    </p>
+                    <p className="text-white text-sm font-bold font-mono uppercase bg-white/5 px-2 py-1 rounded-sm text-center inline-block">
+                      {frequency}H Int.
+                    </p>
+                  </div>
+                </div>
+
+                {/* NETWORK BROADCAST TX RAW INPUT ROW */}
                 <div className="border-b border-white/5 pb-8">
                   <p className="text-[#b87209] text-[10px] uppercase font-black italic mb-2 tracking-widest">
                     Network Execution Broadcast Hash
