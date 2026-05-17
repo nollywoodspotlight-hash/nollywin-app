@@ -58,6 +58,9 @@ export default function DashboardPage() {
     ? `https://nollywin.xyz/join?ref=${address}`
     : "";
 
+  // --- STANDARD ASSET CONTRACT DEFINITIONS ---
+  const WETH_ADDRESS = "0x4200000000000000000000000000000000000006";
+
   // --- HANDLERS ---
 
   const handleManualSync = async () => {
@@ -92,13 +95,11 @@ export default function DashboardPage() {
         if (!supabase) throw new Error("Database client not initialized");
         const { error: dbError } = await supabase.from("strategies").insert([
           {
-            wallet_address: address,
-            target_contract_address: recoveryCA,
-            dca_amount_eth: parseFloat(dcaAmount),
-            frequency_hours: parseInt(frequency),
-            sell_multiplier: parseFloat(sellMultiplier),
-            tx_hash: cleanHash,
-            lifecycle_state: "ACTIVE",
+            user_id: address,
+            token_in: WETH_ADDRESS,
+            token_out: recoveryCA,
+            amount_per_swap: parseFloat(dcaAmount),
+            status: "ACTIVE",
           },
         ]);
         if (dbError) throw dbError;
@@ -136,6 +137,7 @@ export default function DashboardPage() {
       setIsSyncing(true);
       setSyncStep("SNIPER DEPLOYMENT INITIATED");
 
+      // 📡 1. Fire parameters to primary dca_orders table for high-frequency engine monitoring
       const { error: dcaError } = await supabase.from("dca_orders").insert([
         {
           user_address: address,
@@ -148,17 +150,16 @@ export default function DashboardPage() {
 
       if (dcaError) throw dcaError;
 
+      // 💾 2. Sync parameters cleanly to strategies table matching your exact column modifications
       const { error: strategyError } = await supabase
         .from("strategies")
         .insert([
           {
-            wallet_address: address,
-            target_contract_address: contractAddress.trim(),
-            dca_amount_eth: parseFloat(dcaAmount),
-            frequency_hours: parseInt(frequency),
-            sell_multiplier: parseFloat(sellMultiplier),
-            lifecycle_state: "ACTIVE",
-            tx_hash: "AWAITING_HIGH_SPEED_BLOCK_SWAP",
+            user_id: address,
+            token_in: WETH_ADDRESS,
+            token_out: contractAddress.trim(),
+            amount_per_swap: parseFloat(dcaAmount),
+            status: "ACTIVE",
           },
         ]);
 
@@ -168,10 +169,10 @@ export default function DashboardPage() {
         "SUCCESS: Sniper target locked. Nollywin High-Frequency Engine is scanning active blocks.",
       );
 
-      // ✅ FIX: Clear input fields seamlessly instead of forcing a slow page reload
+      // Clear input text block immediately to keep workflow unlocked and responsive
       setContractAddress("");
 
-      // Re-trigger live state evaluation locally
+      // Refresh local streaming metrics in client memory without flash-reloading the window context
       const { data } = await supabase
         .from("dca_orders")
         .select("*")
@@ -294,7 +295,6 @@ export default function DashboardPage() {
         setIsCurrentlyActive(active || completed);
         setHasRealizedProfit(profit);
 
-        // ✅ FIX: Keep system metrics accurate, but NEVER clamp the UI input state true
         if (active) {
           setIsTradeActive(true);
         } else {
@@ -357,7 +357,6 @@ export default function DashboardPage() {
                     type="text"
                     placeholder="0x..."
                     value={contractAddress}
-                    disabled={false} // ✅ FIX: Always Unlocked for Parallel Stacking
                     onChange={(e) => setContractAddress(e.target.value)}
                     className="w-full bg-black/50 border-b-2 border-white/10 py-3 text-xl font-mono text-white outline-none focus:border-[#b87209]"
                   />
@@ -371,7 +370,6 @@ export default function DashboardPage() {
                       type="number"
                       step="0.01"
                       value={dcaAmount}
-                      disabled={false} // ✅ FIX: Always Unlocked for Parallel Stacking
                       onChange={(e) => setDcaAmount(e.target.value)}
                       className="w-full bg-transparent border-b border-white/10 text-xl font-bold italic text-white outline-none"
                     />
@@ -382,7 +380,6 @@ export default function DashboardPage() {
                     </label>
                     <select
                       value={frequency}
-                      disabled={false} // ✅ FIX: Always Unlocked for Parallel Stacking
                       onChange={(e) => setFrequency(e.target.value)}
                       className="w-full bg-transparent border-b border-white/10 text-lg font-bold italic text-[#b87209] outline-none"
                     >
@@ -403,7 +400,6 @@ export default function DashboardPage() {
                     </label>
                     <select
                       value={sellMultiplier}
-                      disabled={false} // ✅ FIX: Always Unlocked for Parallel Stacking
                       onChange={(e) => setSellMultiplier(e.target.value)}
                       className="w-full bg-transparent border-b border-white/10 text-lg font-bold italic text-[#b87209] outline-none"
                     >
