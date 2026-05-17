@@ -14,7 +14,6 @@ import {
 
 const inter = Inter({ subsets: ["latin"] });
 
-// --- VERCEL BUILD FIX: Strict Safe Initialization ---
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 
@@ -30,7 +29,6 @@ export default function ArchivePage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("ALL");
 
-  // 1. SECURITY GUARD: Redirect to home if disconnected
   useEffect(() => {
     if (!isConnected) {
       router.push("/");
@@ -38,38 +36,47 @@ export default function ArchivePage() {
   }, [isConnected, router]);
 
   useEffect(() => {
-    if (supabase && isConnected) {
+    if (supabase && isConnected && address) {
       fetchLiveArchive();
     } else if (!supabase) {
       setLoading(false);
-      console.warn("Supabase configuration missing or invalid.");
     }
-  }, [isConnected]);
+  }, [isConnected, address]);
 
   async function fetchLiveArchive() {
     try {
       setLoading(true);
       if (!supabase || !address) return;
 
-      // ✅ FIXED: Route queries straight to the core dca_orders matrix matching historical endpoints
+      // Pull rows that have concluded from the core dca_orders matrix
       const { data, error } = await supabase
         .from("dca_orders")
         .select("*")
-        .eq("user_address", address)
-        .in("status", ["COMPLETED", "ABORTED", "FAILED"])
+        .eq("user_address", address.toLowerCase())
         .order("id", { ascending: false });
 
       if (error) throw error;
 
-      const categorized = (data || []).map((order: any) => {
-        const profit = order.profit_eth || 0;
-        let type = "CANCELLED";
+      // Filter and cleanly parse concluded rows in local client memory
+      const finishedOrders = (data || []).filter((order: any) => {
+        const checkStatus = String(order.status || "").toUpperCase();
+        return (
+          checkStatus === "COMPLETED" ||
+          checkStatus === "ABORTED" ||
+          checkStatus === "FAILED"
+        );
+      });
 
-        if (order.status === "COMPLETED") {
+      const categorized = finishedOrders.map((order: any) => {
+        const profit = order.profit_eth || 0;
+        const currentStatus = String(order.status || "").toUpperCase();
+        let type = "ABORTED";
+
+        if (currentStatus === "COMPLETED") {
           type = profit > 0 ? "PROFIT" : "LOSS";
-        } else if (order.status === "ABORTED") {
-          type = "CANCELLED";
-        } else if (order.status === "FAILED") {
+        } else if (currentStatus === "ABORTED") {
+          type = "ABORTED";
+        } else if (currentStatus === "FAILED") {
           type = "LOSS";
         }
 
@@ -77,7 +84,7 @@ export default function ArchivePage() {
           id: order.id.toString(),
           target_contract_address: order.token_to_buy || "",
           dca_amount_eth: order.amount_per_trade || 0,
-          status: order.status,
+          status: currentStatus,
           tx_hash: order.tx_hash || "AWAITING_HIGH_SPEED_BLOCK_SWAP",
           profit,
           type,
@@ -99,10 +106,10 @@ export default function ArchivePage() {
   const handleShare = (trade: any) => {
     const text =
       trade.type === "PROFIT"
-        ? `🎬 Production wrap! $${
-            trade.token_ticker || "MEME"
-          } profit: ${trade.profit.toFixed(4)} ETH. Onchain via @NollyWin.`
-        : `🎬 Production Log: Closed sniper tracking configuration script on Base. @NollyWin.`;
+        ? `🎬 Production wrap! Profit: ${trade.profit.toFixed(
+            4,
+          )} ETH. Onchain sniper parameters handled via @NollyWin.`
+        : `🎬 Production Log: Position tracking terminated on Base Mainnet block loops. Secure via @NollyWin.`;
 
     window.open(
       `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`,
@@ -110,7 +117,6 @@ export default function ArchivePage() {
     );
   };
 
-  // 2. ACCESS DENIED GATE: Prevent UI flicker if not connected
   if (!isConnected) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
@@ -126,8 +132,8 @@ export default function ArchivePage() {
       className={`${inter.className} min-h-screen bg-black text-white antialiased`}
     >
       <div className="relative z-30 max-w-5xl mx-auto px-5 pt-32 pb-20">
-        {/* Cinematic Header */}
-        <div className="border-l-4 border-[#b87209] pl-6 mb-12 italic">
+        {/* Cinematic Header Layout */}
+        <div className="border-l-4 border-[#b87209] pl-6 mb-12 italic text-left">
           <h1 className="text-3xl md:text-6xl font-black uppercase tracking-tighter text-white leading-none">
             Production <span className="text-[#b87209]">Archive</span>
           </h1>
@@ -136,9 +142,9 @@ export default function ArchivePage() {
           </p>
         </div>
 
-        {/* Categorization Tabs */}
+        {/* Categorization Tabs Grid */}
         <div className="flex gap-2 md:gap-4 mb-8 overflow-x-auto pb-2 no-scrollbar">
-          {["ALL", "PROFIT", "LOSS", "CANCELLED"].map((cat) => (
+          {["ALL", "PROFIT", "LOSS", "ABORTED"].map((cat) => (
             <button
               key={cat}
               onClick={() => setFilter(cat)}
@@ -174,7 +180,7 @@ export default function ArchivePage() {
                         ? "bg-green-500/10 text-green-500"
                         : trade.type === "LOSS"
                         ? "bg-red-500/10 text-red-500"
-                        : "bg-zinc-800 text-zinc-500"
+                        : "bg-zinc-800 text-red-500/40"
                     }`}
                   >
                     {trade.type === "PROFIT" ? (
@@ -187,18 +193,15 @@ export default function ArchivePage() {
                   </div>
                   <div className="text-left">
                     <h3 className="text-2xl font-black italic tracking-tighter uppercase leading-none">
-                      $
-                      {trade.token_ticker ||
-                        trade.target_contract_address.slice(0, 12)}
-                      ...
+                      ${trade.target_contract_address.slice(0, 14)}...
                     </h3>
                     <p className="text-[9px] text-gray-600 font-bold uppercase tracking-widest mt-1">
                       Script ID: {trade.id} • STATUS:{" "}
                       <span
                         className={
                           trade.status === "ABORTED"
-                            ? "text-red-500/80"
-                            : "text-green-500/80"
+                            ? "text-red-500/80 font-mono"
+                            : "text-green-500/80 font-mono"
                         }
                       >
                         {trade.status}
@@ -208,7 +211,7 @@ export default function ArchivePage() {
                 </div>
 
                 <div className="flex gap-10 w-full md:w-auto border-y md:border-y-0 border-white/5 py-4 md:py-0 text-left">
-                  <div className="text-center md:text-left">
+                  <div>
                     <p className="text-gray-600 uppercase text-[8px] font-black italic mb-1">
                       Net PnL (ETH)
                     </p>
