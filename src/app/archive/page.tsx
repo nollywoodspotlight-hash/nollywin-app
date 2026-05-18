@@ -1,5 +1,6 @@
 "use client";
-import React, { useEffect, useState } from "react";
+
+import React, { useEffect, useState, useCallback } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { Inter } from "next/font/google";
 import { useAccount } from "wagmi";
@@ -10,7 +11,25 @@ import {
   TrendingDown,
   XCircle,
   Loader2,
+  Clock,
+  Gauge,
+  Layers,
 } from "lucide-react";
+
+// ✅ 1. Expanded Type Definition for accurate archiving
+interface Trade {
+  id: string;
+  target_contract_address: string;
+  dca_amount_eth: number;
+  status: string;
+  tx_hash: string;
+  profit: number;
+  type: "PROFIT" | "LOSS" | "ABORTED";
+  pool_fee: number; // Raw number from DB (e.g., 3000)
+  sell_multiplier: number; // Multiplier value (e.g., 2 for 2x)
+  frequency_hours: number; // Time gap between runs
+  created_at: string; // Timestamp for UI logging
+}
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -25,7 +44,7 @@ const supabase =
 export default function ArchivePage() {
   const { address, isConnected } = useAccount();
   const router = useRouter();
-  const [trades, setTrades] = useState<any[]>([]);
+  const [trades, setTrades] = useState<Trade[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("ALL");
 
@@ -35,92 +54,105 @@ export default function ArchivePage() {
     }
   }, [isConnected, router]);
 
+  // ✅ 2. Complete Database Fetcher with newly provided columns
+  const fetchLiveArchive = useCallback(
+    async (isActive: () => boolean) => {
+      if (!supabase || !address) return;
+
+      try {
+        setLoading(true);
+
+        const { data, error } = await supabase
+          .from("dca_orders")
+          .select(
+            `
+          id, 
+          token_to_buy, 
+          amount_per_trade, 
+          status, 
+          tx_hash, 
+          profit_eth,
+          pool_fee,
+          sell_multiplier,
+          frequency_hours,
+          created_at
+        `,
+          )
+          .ilike("user_address", address)
+          .in("status", ["COMPLETED", "ABORTED", "ABORT_REQUESTED", "FAILED"])
+          .order("created_at", { ascending: false }); // Ordered chronologically using the timestamp
+
+        if (error) throw error;
+        if (!isActive()) return;
+
+        const categorized: Trade[] = (data || []).map((order) => {
+          const profit = Number(order.profit_eth) || 0;
+          const currentStatus = String(order.status || "").toUpperCase();
+          let type: "PROFIT" | "LOSS" | "ABORTED" = "ABORTED";
+
+          if (currentStatus === "COMPLETED") {
+            type = profit > 0 ? "PROFIT" : "LOSS";
+          } else if (currentStatus === "FAILED") {
+            type = "LOSS";
+          } else {
+            type = "ABORTED";
+          }
+
+          return {
+            id: order.id.toString(),
+            target_contract_address: order.token_to_buy || "",
+            dca_amount_eth: order.amount_per_trade || 0,
+            status: currentStatus,
+            tx_hash: order.tx_hash || "AWAITING_HIGH_SPEED_BLOCK_SWAP",
+            profit,
+            type,
+            pool_fee: Number(order.pool_fee) || 0,
+            sell_multiplier: Number(order.sell_multiplier) || 1,
+            frequency_hours: Number(order.frequency_hours) || 0,
+            created_at: order.created_at
+              ? new Date(order.created_at).toLocaleDateString()
+              : "UNKNOWN",
+          };
+        });
+
+        setTrades(categorized);
+      } catch (err) {
+        console.error("Archive Fetch Error:", err);
+      } finally {
+        if (isActive()) setLoading(false);
+      }
+    },
+    [address],
+  );
+
   useEffect(() => {
+    let isMounted = true;
+    const checkActive = () => isMounted;
+
     if (supabase && isConnected && address) {
-      fetchLiveArchive();
+      fetchLiveArchive(checkActive);
     } else if (!supabase) {
       setLoading(false);
     }
-  }, [isConnected, address]);
 
-  async function fetchLiveArchive() {
-    try {
-      setLoading(true);
-      if (!supabase || !address) return;
-
-      console.log(
-        `📡 Fetching archive profiles for connected account actor: ${address}`,
-      );
-
-      // Fetch ALL orders for this user address to perform case-insensitive local resolution
-      const { data, error } = await supabase
-        .from("dca_orders")
-        .select("*")
-        .order("id", { ascending: false });
-
-      if (error) throw error;
-
-      const userLower = address.toLowerCase();
-
-      // ✅ CASE-INSENSITIVE MATCHING LAYER: Catches both upper/lower variants perfectly
-      const userConcludedOrders = (data || []).filter((order: any) => {
-        const dbUser = String(order.user_address || "").toLowerCase();
-        const dbStatus = String(order.status || "").toUpperCase();
-
-        // Match user's wallet AND verify if the order is in a concluded or requested abort state
-        return (
-          dbUser === userLower &&
-          (dbStatus === "COMPLETED" ||
-            dbStatus === "ABORTED" ||
-            dbStatus === "ABORT_REQUESTED" ||
-            dbStatus === "FAILED")
-        );
-      });
-
-      const categorized = userConcludedOrders.map((order: any) => {
-        const profit = order.profit_eth || 0;
-        const currentStatus = String(order.status || "").toUpperCase();
-        let type = "ABORTED";
-
-        if (currentStatus === "COMPLETED") {
-          type = profit > 0 ? "PROFIT" : "LOSS";
-        } else if (currentStatus === "FAILED") {
-          type = "LOSS";
-        } else {
-          // Both ABORTED and intermediate ABORT_REQUESTED fallback here
-          type = "ABORTED";
-        }
-
-        return {
-          id: order.id.toString(),
-          target_contract_address: order.token_to_buy || "",
-          dca_amount_eth: order.amount_per_trade || 0,
-          status: currentStatus,
-          tx_hash: order.tx_hash || "AWAITING_HIGH_SPEED_BLOCK_SWAP",
-          profit,
-          type,
-        };
-      });
-
-      setTrades(categorized);
-    } catch (err) {
-      console.error("Archive Fetch Error:", err);
-    } finally {
-      setLoading(false);
-    }
-  }
+    return () => {
+      isMounted = false;
+    };
+  }, [isConnected, address, fetchLiveArchive]);
 
   const filteredTrades = trades.filter(
     (t) => filter === "ALL" || t.type === filter,
   );
 
-  const handleShare = (trade: any) => {
+  const handleShare = (trade: Trade) => {
     const text =
       trade.type === "PROFIT"
-        ? `🎬 Production wrap! Profit: ${trade.profit.toFixed(
+        ? `🎬 Wrap! Captured +${trade.profit.toFixed(
             4,
-          )} ETH. Onchain sniper parameters handled via @NollyWin.`
-        : `🎬 Production Log: Position tracking terminated on Base Mainnet block loops. Secure via @NollyWin.`;
+          )} ETH via @NollyWin. [Target: ${
+            trade.sell_multiplier
+          }x Multiplier / Pool: ${(trade.pool_fee / 10000).toFixed(2)}%]`
+        : `🎬 Production Log: Target position tracking offline on Base Mainnet. Safeguards deployed via @NollyWin.`;
 
     window.open(
       `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`,
@@ -129,13 +161,7 @@ export default function ArchivePage() {
   };
 
   if (!isConnected) {
-    return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="animate-pulse text-[#b87209] font-black uppercase italic tracking-[0.3em] text-xs">
-          ENCRYPTED ARCHIVE // REDIRECTING...
-        </div>
-      </div>
-    );
+    return <div className="min-h-screen bg-black" />;
   }
 
   return (
@@ -143,7 +169,7 @@ export default function ArchivePage() {
       className={`${inter.className} min-h-screen bg-black text-white antialiased`}
     >
       <div className="relative z-30 max-w-5xl mx-auto px-5 pt-32 pb-20">
-        {/* Cinematic Header Layout */}
+        {/* Header Block */}
         <div className="border-l-4 border-[#b87209] pl-6 mb-12 italic text-left">
           <h1 className="text-3xl md:text-6xl font-black uppercase tracking-tighter text-white leading-none">
             Production <span className="text-[#b87209]">Archive</span>
@@ -153,7 +179,7 @@ export default function ArchivePage() {
           </p>
         </div>
 
-        {/* Categorization Tabs Grid */}
+        {/* Tab Controls */}
         <div className="flex gap-2 md:gap-4 mb-8 overflow-x-auto pb-2 no-scrollbar">
           {["ALL", "PROFIT", "LOSS", "ABORTED"].map((cat) => (
             <button
@@ -182,11 +208,12 @@ export default function ArchivePage() {
             {filteredTrades.map((trade) => (
               <div
                 key={trade.id}
-                className="bg-[#080808] border border-white/5 p-6 flex flex-col md:flex-row justify-between items-center gap-6 group hover:border-[#b87209]/30 transition-all shadow-2xl"
+                className="bg-[#080808] border border-white/5 p-6 flex flex-col xl:flex-row justify-between items-stretch xl:items-center gap-6 group hover:border-[#b87209]/30 transition-all shadow-2xl"
               >
-                <div className="flex items-center gap-6 w-full md:w-auto">
+                {/* Core Status & Identifier */}
+                <div className="flex items-center gap-5 min-w-[280px]">
                   <div
-                    className={`p-4 rounded-sm ${
+                    className={`p-4 rounded-sm shrink-0 ${
                       trade.type === "PROFIT"
                         ? "bg-green-500/10 text-green-500"
                         : trade.type === "LOSS"
@@ -203,11 +230,16 @@ export default function ArchivePage() {
                     )}
                   </div>
                   <div className="text-left">
-                    <h3 className="text-2xl font-black italic tracking-tighter uppercase leading-none">
-                      ${trade.target_contract_address.slice(0, 14)}...
+                    <h3 className="text-xl font-black italic tracking-tighter uppercase leading-none text-white/90">
+                      {trade.target_contract_address
+                        ? `${trade.target_contract_address.slice(
+                            0,
+                            10,
+                          )}...${trade.target_contract_address.slice(-4)}`
+                        : "UNKNOWN TOKEN"}
                     </h3>
-                    <p className="text-[9px] text-gray-600 font-bold uppercase tracking-widest mt-1">
-                      Script ID: {trade.id} • STATUS:{" "}
+                    <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest mt-1.5">
+                      ID: {trade.id} • STATUS:{" "}
                       <span
                         className={
                           trade.status === "ABORT_REQUESTED" ||
@@ -219,10 +251,50 @@ export default function ArchivePage() {
                         {trade.status}
                       </span>
                     </p>
+                    <p className="text-[8px] text-gray-600 font-mono uppercase mt-1">
+                      TX: {trade.tx_hash.slice(0, 16)}...
+                    </p>
                   </div>
                 </div>
 
-                <div className="flex gap-10 w-full md:w-auto border-y md:border-y-0 border-white/5 py-4 md:py-0 text-left">
+                {/* ✅ NEW: Script Blueprint Parameters Sub-Panel */}
+                <div className="grid grid-cols-3 gap-4 border-t border-b xl:border-t-0 xl:border-b-0 border-white/5 py-4 xl:py-0 text-left flex-1 max-w-md">
+                  <div>
+                    <span className="flex items-center gap-1 text-gray-600 uppercase text-[8px] font-black italic mb-1">
+                      <Layers size={10} /> Liquidity Pool
+                    </span>
+                    <p className="text-xs font-mono font-bold text-gray-300">
+                      {(trade.pool_fee / 10000).toFixed(2)}%
+                    </p>
+                  </div>
+                  <div>
+                    <span className="flex items-center gap-1 text-gray-600 uppercase text-[8px] font-black italic mb-1">
+                      <Gauge size={10} /> Target Threshold
+                    </span>
+                    <p className="text-xs font-mono font-bold text-gray-300">
+                      {trade.sell_multiplier}x Milestone
+                    </p>
+                  </div>
+                  <div>
+                    <span className="flex items-center gap-1 text-gray-600 uppercase text-[8px] font-black italic mb-1">
+                      <Clock size={10} /> Frequency Loop
+                    </span>
+                    <p className="text-xs font-mono font-bold text-gray-300">
+                      Every {trade.frequency_hours}h
+                    </p>
+                  </div>
+                </div>
+
+                {/* Financial Output Summary Block */}
+                <div className="flex justify-between md:justify-start xl:justify-between items-center gap-12 text-left">
+                  <div>
+                    <p className="text-gray-600 uppercase text-[8px] font-black italic mb-1">
+                      Size (ETH)
+                    </p>
+                    <p className="text-sm font-mono font-black text-gray-400">
+                      {trade.dca_amount_eth.toFixed(4)}
+                    </p>
+                  </div>
                   <div>
                     <p className="text-gray-600 uppercase text-[8px] font-black italic mb-1">
                       Net PnL (ETH)
@@ -242,13 +314,19 @@ export default function ArchivePage() {
                   </div>
                 </div>
 
-                <button
-                  onClick={() => handleShare(trade)}
-                  className="w-full md:w-auto flex items-center justify-center gap-2 border-2 border-[#b87209] text-[#b87209] hover:bg-[#b87209] hover:text-black px-8 py-4 font-black uppercase italic text-xs active:scale-95 transition-all"
-                >
-                  <Share2 size={14} />
-                  Share Script
-                </button>
+                {/* Actions */}
+                <div className="flex flex-col justify-center items-end text-right">
+                  <button
+                    onClick={() => handleShare(trade)}
+                    className="w-full xl:w-auto flex items-center justify-center gap-2 border-2 border-[#b87209] text-[#b87209] hover:bg-[#b87209] hover:text-black px-6 py-3 font-black uppercase italic text-xs active:scale-95 transition-all"
+                  >
+                    <Share2 size={13} />
+                    Share Manifest
+                  </button>
+                  <span className="hidden xl:block text-[8px] font-bold tracking-tighter font-mono text-zinc-600 uppercase mt-2">
+                    Logged: {trade.created_at}
+                  </span>
+                </div>
               </div>
             ))}
 
