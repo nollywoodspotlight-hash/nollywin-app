@@ -146,43 +146,52 @@ export default function DashboardStats() {
         </div>
       </div>
 
-      {/* 3. ULTRA-COMPACT MISSION BRIEFING MODAL */}
+      {/* ✅ 3. OPTIMIZED MISSION BRIEFING MODAL (COMPACT FIX) */}
       {selectedTrade && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-3 sm:p-4 backdrop-blur-sm">
-          {/* SHRINK CHANGES:
-            - max-w-sm: Caps total width at 384px instead of 448px so it sits perfectly inside phone boundaries.
-            - p-4 sm:p-6: Relaxes padding constraints to reclaim substantial space for content parameters.
-            - gap-4 & space-y-4: Compacted raw vertical space margins.
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 p-2 sm:p-4 backdrop-blur-md">
+          {/* - max-w-xs: Hard clamp to 320px frame so it physically cannot bleed off mobile screens.
+            - max-h-[75vh]: Caps maximum container vertical height defensively.
+            - flex flex-col justify-between: Drives static layouts to top/bottom poles.
           */}
-          <div className="w-full max-w-sm max-h-[85vh] overflow-y-auto bg-[#080808] border-2 border-[#b87209] p-4 sm:p-6 space-y-4 flex flex-col justify-between shadow-2xl">
-            <div>
-              <h3 className="text-[#b87209] text-xl uppercase tracking-tighter mb-2">
+          <div className="w-full max-w-xs max-h-[75vh] bg-[#080808] border-2 border-[#b87209] p-4 flex flex-col justify-between shadow-2xl rounded-sm">
+            {/* Header: Locked Top Row */}
+            <div className="shrink-0 pb-1">
+              <h3 className="text-[#b87209] text-xl uppercase tracking-tighter">
                 Mission Briefing
               </h3>
-              <div className="space-y-2 border-y border-white/5 py-3 font-mono text-[9px] text-left">
-                <p className="text-gray-500 break-all leading-relaxed">
-                  CONTRACT:{" "}
-                  <span className="text-white selection:bg-[#b87209]">
-                    {selectedTrade.target_contract_address}
-                  </span>
+            </div>
+
+            {/* Body Context Window: Independently scrollable wrapper layer */}
+            <div className="flex-1 overflow-y-auto border-y border-white/5 my-2 py-3 font-mono text-[9px] text-left space-y-3">
+              <div className="space-y-1">
+                <p className="text-gray-500 uppercase tracking-wider font-bold">
+                  [ Contract ]
                 </p>
-                <p className="text-gray-500">
-                  STATE:{" "}
-                  <span className="text-green-500">ACTIVE PRODUCTION</span>
+                <p className="text-white break-all leading-relaxed bg-zinc-900/40 p-2 border border-white/5 selection:bg-[#b87209]">
+                  {selectedTrade.target_contract_address}
                 </p>
+              </div>
+              <div className="flex items-center justify-between pt-1">
+                <span className="text-gray-500 uppercase tracking-wider font-bold">
+                  [ State ]
+                </span>
+                <span className="text-green-500 font-black animate-pulse">
+                  ACTIVE PRODUCTION
+                </span>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 pt-1">
+            {/* Actions: Locked Bottom Row */}
+            <div className="shrink-0 grid grid-cols-2 gap-2 pt-1">
               <button
                 onClick={() => setSelectedTrade(null)}
-                className="py-2.5 border border-white/20 text-white text-[9px] uppercase hover:bg-white/5 active:scale-95 transition-all"
+                className="py-2 border border-white/20 text-white text-[9px] uppercase tracking-wider hover:bg-white/5 active:scale-95 transition-all"
               >
                 Close
               </button>
               <button
                 onClick={() => handleAbort(selectedTrade)}
-                className="py-2.5 bg-red-600 text-white text-[9px] uppercase hover:bg-red-700 active:scale-95 transition-all"
+                className="py-2 bg-red-600 text-white text-[9px] uppercase tracking-wider hover:bg-red-700 active:scale-95 transition-all"
               >
                 ABORT & LIQ
               </button>
