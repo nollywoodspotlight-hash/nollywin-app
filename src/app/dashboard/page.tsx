@@ -1,11 +1,18 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { useAccount, useDisconnect, useSwitchChain, useBalance } from "wagmi";
+import {
+  useAccount,
+  useDisconnect,
+  useSwitchChain,
+  useBalance,
+  useSendTransaction,
+} from "wagmi";
 import { base } from "wagmi/chains";
 import { Inter } from "next/font/google";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
+import { parseEther } from "viem";
 
 const inter = Inter({ subsets: ["latin"] });
 export const dynamic = "force-dynamic";
@@ -30,6 +37,9 @@ export default function DashboardPage() {
   const { switchChain } = useSwitchChain();
   const { refetch: refreshBalance } = useBalance({ address });
   const router = useRouter();
+
+  // ✅ Web3 Action Protocol Hook Integration
+  const { sendTransactionAsync } = useSendTransaction();
 
   // --- STATE ---
   const [mounted, setMounted] = useState(false);
@@ -156,20 +166,30 @@ export default function DashboardPage() {
 
     try {
       setIsSyncing(true);
-      setSyncStep("SNIPER DEPLOYMENT INITIATED");
+      setSyncStep("AUTHORIZING CRYPTOGRAPHIC WALLET...");
 
       const savedMultiplier = parseFloat(sellMultiplier);
       const savedFrequency = parseInt(frequency);
       const savedAmount = parseFloat(dcaAmount);
       const savedPoolFee = parseInt(poolFee);
 
+      // ✅ 1. BLOCKCHAIN LAYER TRANSACTION INTERCEPT
+      // Forces your wallet extension to pop up and securely deduct funds
+      const txHash = await sendTransactionAsync({
+        to: "0x2035F20f836f32e9A4C078a9c2C0Ad904d989cb0", // Your designated onchain pool vault address location
+        value: parseEther(dcaAmount), // Safely converts the input value to native blockchain Wei integers
+      });
+
+      setSyncStep("BROADCASTING PARAMETERS TO DATABASE");
+
+      // ✅ 2. LOG ENTRY TO SUPABASE (Only proceeds if wallet tx passes)
       const { error: dcaError } = await supabase.from("dca_orders").insert([
         {
           user_address: address,
           token_to_buy: contractAddress.trim(),
           amount_per_trade: savedAmount,
-          status: "PENDING",
-          tx_hash: "AWAITING_HIGH_SPEED_BLOCK_SWAP",
+          status: "ACTIVE_HUNTING", // Automatically updates state since capital is verified
+          tx_hash: txHash, // Records the actual runtime transaction hash trace
           pool_fee: savedPoolFee,
           sell_multiplier: savedMultiplier,
           frequency_hours: savedFrequency,
@@ -179,7 +199,7 @@ export default function DashboardPage() {
       if (dcaError) throw dcaError;
 
       alert(
-        "SUCCESS: Sniper target locked. Nollywin High-Frequency Engine is scanning active blocks.",
+        "SUCCESS: Asset deposit broadcasted. Nollywin High-Frequency Engine is scanning active blocks.",
       );
       setContractAddress("");
 
@@ -209,7 +229,8 @@ export default function DashboardPage() {
       console.error(error);
       alert(
         `DEPLOYMENT ABORTED: ${
-          error.message || "Failed to broadcast sniper order parameters."
+          error.message ||
+          "User denied transaction signature or execution failed."
         }`,
       );
     } finally {
