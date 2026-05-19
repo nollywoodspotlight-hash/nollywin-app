@@ -502,37 +502,45 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* HIGH-TELEMETRY DETAILED MODAL VIEWER */}
+        {/* ✅ 3. HIGH-TELEMETRY DETAILED MODAL VIEWER (MOBILE FLUID COMPACTED) */}
         {selectedTrade && (
-          <div className="fixed inset-0 z-[300] flex items-center justify-center p-6 bg-black/95 backdrop-blur-md">
-            <div className="w-full max-w-2xl bg-[#080808] border-2 border-[#b87209] shadow-2xl">
-              <div className="bg-[#b87209] px-8 py-4 flex justify-between items-center text-left">
-                <h3 className="text-black font-black uppercase italic text-xl tracking-tighter">
-                  Sniper Target Parameters: Order #{selectedTrade.id}
+          <div className="fixed inset-0 z-[300] flex items-center justify-center p-3 sm:p-4 bg-black/95 backdrop-blur-md">
+            {/* - max-w-sm: Caps container width at 384px to prevent screen bleeding on mobile.
+                - max-h-[85vh] + overflow-y-auto: Keeps everything strictly window-bound and scrollable.
+                - flex flex-col justify-between: Layout structure holds elements to top/bottom axes.
+            */}
+            <div className="w-full max-w-sm max-h-[85vh] overflow-y-auto bg-[#080808] border-2 border-[#b87209] p-4 sm:p-6 flex flex-col justify-between shadow-2xl rounded-sm">
+              {/* Header Box Layer */}
+              <div className="shrink-0 pb-2 border-b border-white/5 flex justify-between items-center text-left">
+                <h3 className="text-[#b87209] font-black uppercase italic text-sm tracking-tighter">
+                  Target: Order #{selectedTrade.id}
                 </h3>
                 <button
                   onClick={() => setSelectedTrade(null)}
-                  className="text-black font-black hover:rotate-90 transition-all text-sm font-mono"
+                  className="text-[#b87209] hover:text-white font-mono text-xs uppercase tracking-widest transition-colors"
                 >
                   [X]
                 </button>
               </div>
-              <div className="p-10 space-y-8 text-left">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 border-b border-white/5 pb-6">
+
+              {/* Data Specifications Window */}
+              <div className="flex-1 overflow-y-auto py-4 space-y-4 text-left font-mono text-[10px]">
+                <div>
+                  <label className="text-[#b87209] text-[9px] uppercase font-black italic mb-1.5 tracking-widest block">
+                    Target Asset Contract
+                  </label>
+                  <p className="text-white break-all select-all bg-black/40 p-2 border border-white/5 rounded-sm leading-normal">
+                    {selectedTrade.token_to_buy}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-[#b87209] text-[10px] uppercase font-black italic mb-2 tracking-widest block">
-                      Target Asset Contract
-                    </label>
-                    <p className="text-white text-xs truncate font-mono select-all bg-black/30 p-2 border border-white/5 rounded-sm">
-                      {selectedTrade.token_to_buy}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="text-[#b87209] text-[10px] uppercase font-black italic mb-2 tracking-widest block">
+                    <label className="text-gray-500 text-[9px] uppercase font-black italic mb-1 tracking-wider block">
                       Pipeline State
                     </label>
                     <p
-                      className={`text-xs uppercase font-black italic tracking-wider p-2 border rounded-sm inline-block ${
+                      className={`text-[9px] uppercase font-black italic tracking-wider py-1 px-2 border rounded-sm inline-block ${
                         selectedTrade.status === "COMPLETED"
                           ? "text-green-500 border-green-500/20 bg-green-500/5"
                           : selectedTrade.status === "ABORT_REQUESTED" ||
@@ -544,51 +552,53 @@ export default function DashboardPage() {
                       {selectedTrade.status}
                     </p>
                   </div>
-                </div>
-
-                <div className="grid grid-cols-4 gap-4 border-b border-white/5 pb-6 text-left">
                   <div>
                     <p className="text-gray-500 text-[9px] uppercase font-black italic mb-1 tracking-wider">
                       Allocation Size
                     </p>
-                    <p className="text-white text-sm font-black italic font-mono">
+                    <p className="text-white text-xs font-black italic">
                       {selectedTrade.amount_per_trade}{" "}
-                      <span className="text-[#b87209] text-[10px]">ETH</span>
+                      <span className="text-[#b87209] font-sans text-[9px]">
+                        ETH
+                      </span>
                     </p>
                   </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 pt-2 border-t border-white/5">
                   <div>
-                    <p className="text-gray-500 text-[9px] uppercase font-black italic mb-1 tracking-wider">
+                    <p className="text-gray-500 text-[8px] uppercase font-black italic mb-1 tracking-wider">
                       Exit Target
                     </p>
-                    <p className="text-[#b87209] text-sm font-black italic font-mono">
+                    <p className="text-[#b87209] text-xs font-black italic">
                       {selectedTrade.sell_multiplier}X
                     </p>
                   </div>
                   <div>
-                    <p className="text-gray-500 text-[9px] uppercase font-black italic mb-1 tracking-wider">
+                    <p className="text-gray-500 text-[8px] uppercase font-black italic mb-1 tracking-wider">
                       Block Cycle
                     </p>
-                    <p className="text-white text-xs font-bold font-mono uppercase bg-white/5 px-2 py-1 rounded-sm text-center inline-block">
-                      {selectedTrade.frequency_hours}H Int.
+                    <p className="text-white text-[9px] font-bold uppercase bg-white/5 px-1 py-0.5 rounded-sm inline-block">
+                      {selectedTrade.frequency_hours}H
                     </p>
                   </div>
                   <div>
-                    <p className="text-gray-500 text-[9px] uppercase font-black italic mb-1 tracking-wider">
-                      DEX Pool Fee
+                    <p className="text-gray-500 text-[8px] uppercase font-black italic mb-1 tracking-wider">
+                      Pool Fee
                     </p>
-                    <p className="text-white text-xs font-bold font-mono uppercase bg-white/5 px-2 py-1 rounded-sm text-center inline-block">
+                    <p className="text-white text-[9px] font-bold uppercase bg-white/5 px-1 py-0.5 rounded-sm inline-block">
                       {selectedTrade.pool_fee}
                     </p>
                   </div>
                 </div>
 
                 {selectedTrade.profit_eth !== undefined && (
-                  <div className="border-b border-white/5 pb-6">
+                  <div className="pt-2 border-t border-white/5">
                     <label className="text-gray-500 text-[9px] uppercase font-black italic mb-1 tracking-wider block">
                       Realized Profit PnL
                     </label>
                     <p
-                      className={`text-xl font-bold font-mono ${
+                      className={`text-base font-bold ${
                         selectedTrade.profit_eth > 0
                           ? "text-green-500"
                           : "text-gray-400"
@@ -599,25 +609,34 @@ export default function DashboardPage() {
                   </div>
                 )}
 
-                <div className="border-b border-white/5 pb-8">
-                  <label className="text-[#b87209] text-[10px] uppercase font-black italic mb-2 tracking-widest block">
+                <div className="pt-2 border-t border-white/5">
+                  <label className="text-[#b87209] text-[9px] uppercase font-black italic mb-1 tracking-widest block">
                     Network Broadcast Hash
                   </label>
-                  <p className="text-gray-400 text-xs font-mono select-all break-all bg-black/40 p-3 border border-white/5 rounded-sm tracking-tighter">
+                  <p className="text-gray-400 text-[9px] select-all break-all bg-black/40 p-2 border border-white/5 rounded-sm tracking-tighter leading-normal">
                     {selectedTrade.tx_hash}
                   </p>
                 </div>
+              </div>
 
+              {/* Execution Actions Bottom Layer */}
+              <div className="shrink-0 pt-2 border-t border-white/5 space-y-2">
                 {(selectedTrade.status === "PENDING" ||
                   selectedTrade.status === "ACTIVE_HUNTING" ||
                   selectedTrade.status === "TRACKING_PROFIT") && (
                   <button
                     onClick={() => handleAbortTrade(selectedTrade)}
-                    className="w-full py-8 bg-red-600 hover:bg-red-700 text-white font-black uppercase italic text-2xl tracking-tighter transition-all active:scale-95 shadow-lg"
+                    className="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-black uppercase italic text-sm tracking-tighter transition-all active:scale-95 shadow-lg"
                   >
                     ABORT POSITION TRACKING
                   </button>
                 )}
+                <button
+                  onClick={() => setSelectedTrade(null)}
+                  className="w-full py-2.5 border border-white/20 text-white text-[10px] uppercase font-bold tracking-wider hover:bg-white/5 active:scale-95 transition-all"
+                >
+                  Close Parameters
+                </button>
               </div>
             </div>
           </div>
