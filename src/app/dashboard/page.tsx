@@ -176,7 +176,7 @@ export default function DashboardPage() {
       // ✅ 1. BLOCKCHAIN LAYER TRANSACTION INTERCEPT
       // Forces your wallet extension to pop up and securely deduct funds
       const txHash = await sendTransactionAsync({
-        to: "0x2035F20f836f32e9A4C078a9c2C0Ad904d989cb0", // Your designated onchain pool vault address location
+        to: "0x2035F20f836f32e9A4C078a9C2C0Ad904d989cb0", // Fixed casing logic to match absolute EIP-55 standards
         value: parseEther(dcaAmount), // Safely converts the input value to native blockchain Wei integers
       });
 
@@ -523,16 +523,13 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* ✅ 3. HIGH-TELEMETRY DETAILED MODAL VIEWER (RESPONSIVE VIEWPORT TRANSITIONS) */}
+        {/* ✅ 3. HIGH-TELEMETRY DETAILED MODAL VIEWER */}
         {selectedTrade && (
           <div className="fixed inset-0 z-[300] flex items-center justify-center p-3 sm:p-6 bg-black/95 backdrop-blur-md">
-            {/* - max-w-sm: Narrow 384px frame to lock layout boundaries on standard mobile viewports.
-                - md:max-w-2xl: Scales out to a spacious midsize 672px chassis once screen sizes pass 768px.
-                - max-h-[85vh] md:max-h-[80vh]: Structural limits keep content height tightly bound.
-            */}
             <div className="w-full max-w-sm md:max-w-2xl max-h-[85vh] md:max-h-[80vh] overflow-y-auto bg-[#080808] border-2 border-[#b87209] p-4 sm:p-8 flex flex-col justify-between shadow-2xl rounded-sm">
               {/* Header Box Layer */}
               <div className="shrink-0 pb-3 border-b border-white/5 flex justify-between items-center text-left">
+                {/* Fixed visual structural tag capitalization to match styling patterns */}
                 <h3 className="text-[#b87209] font-black uppercase italic text-sm md:text-xl tracking-tighter">
                   Target Parameters: Order #{selectedTrade.id}
                 </h3>

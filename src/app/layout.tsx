@@ -47,8 +47,13 @@ export default function RootLayout({
             {/* 2. The Brand Gold Radial Glow (Kept for depth) */}
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_10%,rgba(184,114,9,0.15),transparent_60%)]" />
 
-            {/* 3. Cinematic Grain/Noise Overlay */}
-            <div className="absolute inset-0 opacity-[0.03] bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
+            {/* 3. Cinematic Grain/Noise Overlay (FIXED: Hardcoded base64 engine eliminates external 404 network crashes) */}
+            <div
+              className="absolute inset-0 opacity-[0.02]"
+              style={{
+                backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0%200%20200%20200'%20xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter%20id='noiseFilter'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.65'%20numOctaves='3'%20stitchTiles='stitch'/%3E%3C/filter%3E%3Crect%20width='100%25'%20height='100%25'%20filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
+              }}
+            />
           </div>
 
           {/* Your Custom Header (z-300) */}

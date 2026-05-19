@@ -10,8 +10,17 @@ import { coinbaseWallet } from "wagmi/connectors";
 export function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
 
-  const [wagmiConfig] = useState(() =>
-    createConfig({
+  const [wagmiConfig] = useState(() => {
+    // TELEMETRY SANITIZATION LAYER: Ensure the incoming RPC URL is strictly valid for Base Mainnet
+    const rawRpcUrl = process.env.NEXT_PUBLIC_ALCHEMY_RPC_URL || "";
+
+    // Fallback instantly to clear public infrastructure if the variable contains Optimism configs or syntax errors
+    const verifiedRpcEndpoint =
+      rawRpcUrl.includes("opt-mainnet") || !rawRpcUrl.startsWith("https://")
+        ? "https://mainnet.base.org"
+        : rawRpcUrl;
+
+    return createConfig({
       // MASTER FIX: Base is the primary and only chain
       chains: [base],
       connectors: [
@@ -22,13 +31,11 @@ export function Providers({ children }: { children: ReactNode }) {
       ],
       ssr: true,
       transports: {
-        // Use your Alchemy RPC if available, otherwise fallback to public
-        [base.id]: http(
-          process.env.NEXT_PUBLIC_ALCHEMY_RPC_URL || "https://mainnet.base.org",
-        ),
+        // Deploys the sanitized Base RPC protocol cleanly to prevent console errors
+        [base.id]: http(verifiedRpcEndpoint),
       },
-    }),
-  );
+    });
+  });
 
   return (
     <WagmiProvider config={wagmiConfig}>
