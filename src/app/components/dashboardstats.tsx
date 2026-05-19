@@ -146,34 +146,43 @@ export default function DashboardStats() {
         </div>
       </div>
 
-      {/* 3. MISSION BRIEFING MODAL */}
+      {/* ✅ 3. OPTIMIZED MISSION BRIEFING MODAL */}
       {selectedTrade && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md bg-[#080808] border-2 border-[#b87209] p-8 space-y-6">
-            <h3 className="text-[#b87209] text-2xl uppercase tracking-tighter">
-              Mission Briefing
-            </h3>
-            <div className="space-y-2 border-y border-white/5 py-4 font-mono text-[10px]">
-              <p className="text-gray-500">
-                CONTRACT:{" "}
-                <span className="text-white">
-                  {selectedTrade.target_contract_address}
-                </span>
-              </p>
-              <p className="text-gray-500">
-                STATE: <span className="text-green-500">ACTIVE PRODUCTION</span>
-              </p>
+          {/* FIX EXPLANATION:
+            - max-h-[90vh] keeps the modal from expanding outside the viewport height.
+            - overflow-y-auto turns on a scroll inside the modal if the text runs too long.
+            - break-all handles the contract address gracefully so it breaks lines instead of pushing walls out.
+          */}
+          <div className="w-full max-w-md max-h-[90vh] overflow-y-auto bg-[#080808] border-2 border-[#b87209] p-6 md:p-8 space-y-6 flex flex-col justify-between">
+            <div>
+              <h3 className="text-[#b87209] text-2xl uppercase tracking-tighter mb-4">
+                Mission Briefing
+              </h3>
+              <div className="space-y-3 border-y border-white/5 py-4 font-mono text-[10px] text-left">
+                <p className="text-gray-500 break-all leading-relaxed">
+                  CONTRACT:{" "}
+                  <span className="text-white selection:bg-[#b87209]">
+                    {selectedTrade.target_contract_address}
+                  </span>
+                </p>
+                <p className="text-gray-500">
+                  STATE:{" "}
+                  <span className="text-green-500">ACTIVE PRODUCTION</span>
+                </p>
+              </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+
+            <div className="grid grid-cols-2 gap-4 pt-2">
               <button
                 onClick={() => setSelectedTrade(null)}
-                className="py-3 border border-white/20 text-white text-[10px] uppercase"
+                className="py-3 border border-white/20 text-white text-[10px] uppercase hover:bg-white/5 active:scale-95 transition-all"
               >
                 Close
               </button>
               <button
                 onClick={() => handleAbort(selectedTrade)}
-                className="py-3 bg-red-600 text-white text-[10px] uppercase hover:bg-red-700"
+                className="py-3 bg-red-600 text-white text-[10px] uppercase hover:bg-red-700 active:scale-95 transition-all"
               >
                 ABORT & LIQUIDATE
               </button>
