@@ -146,20 +146,20 @@ export default function DashboardStats() {
         </div>
       </div>
 
-      {/* ✅ 3. OPTIMIZED MISSION BRIEFING MODAL */}
+      {/* 3. ULTRA-COMPACT MISSION BRIEFING MODAL */}
       {selectedTrade && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4 backdrop-blur-sm">
-          {/* FIX EXPLANATION:
-            - max-h-[90vh] keeps the modal from expanding outside the viewport height.
-            - overflow-y-auto turns on a scroll inside the modal if the text runs too long.
-            - break-all handles the contract address gracefully so it breaks lines instead of pushing walls out.
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-3 sm:p-4 backdrop-blur-sm">
+          {/* SHRINK CHANGES:
+            - max-w-sm: Caps total width at 384px instead of 448px so it sits perfectly inside phone boundaries.
+            - p-4 sm:p-6: Relaxes padding constraints to reclaim substantial space for content parameters.
+            - gap-4 & space-y-4: Compacted raw vertical space margins.
           */}
-          <div className="w-full max-w-md max-h-[90vh] overflow-y-auto bg-[#080808] border-2 border-[#b87209] p-6 md:p-8 space-y-6 flex flex-col justify-between">
+          <div className="w-full max-w-sm max-h-[85vh] overflow-y-auto bg-[#080808] border-2 border-[#b87209] p-4 sm:p-6 space-y-4 flex flex-col justify-between shadow-2xl">
             <div>
-              <h3 className="text-[#b87209] text-2xl uppercase tracking-tighter mb-4">
+              <h3 className="text-[#b87209] text-xl uppercase tracking-tighter mb-2">
                 Mission Briefing
               </h3>
-              <div className="space-y-3 border-y border-white/5 py-4 font-mono text-[10px] text-left">
+              <div className="space-y-2 border-y border-white/5 py-3 font-mono text-[9px] text-left">
                 <p className="text-gray-500 break-all leading-relaxed">
                   CONTRACT:{" "}
                   <span className="text-white selection:bg-[#b87209]">
@@ -173,18 +173,18 @@ export default function DashboardStats() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 pt-2">
+            <div className="grid grid-cols-2 gap-3 pt-1">
               <button
                 onClick={() => setSelectedTrade(null)}
-                className="py-3 border border-white/20 text-white text-[10px] uppercase hover:bg-white/5 active:scale-95 transition-all"
+                className="py-2.5 border border-white/20 text-white text-[9px] uppercase hover:bg-white/5 active:scale-95 transition-all"
               >
                 Close
               </button>
               <button
                 onClick={() => handleAbort(selectedTrade)}
-                className="py-3 bg-red-600 text-white text-[10px] uppercase hover:bg-red-700 active:scale-95 transition-all"
+                className="py-2.5 bg-red-600 text-white text-[9px] uppercase hover:bg-red-700 active:scale-95 transition-all"
               >
-                ABORT & LIQUIDATE
+                ABORT & LIQ
               </button>
             </div>
           </div>
