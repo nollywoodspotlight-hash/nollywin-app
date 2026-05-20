@@ -103,7 +103,7 @@ export default function DashboardPage() {
     try {
       const recoveryCA =
         contractAddress.length >= 42
-          ? contractAddress
+          ? contractAddress.trim().toLowerCase()
           : "0x0000000000000000000000000000000000000000";
       const response = await fetch("/api/activate", {
         method: "POST",
@@ -168,6 +168,9 @@ export default function DashboardPage() {
       setIsSyncing(true);
       setSyncStep("AUTHORIZING CRYPTOGRAPHIC WALLET...");
 
+      // AUTOMATED INPUT SANITIZER LAYER: Safely flattens user token casings to prevent EIP-55 frontend crash variables
+      const sanitizedTargetToken = contractAddress.trim().toLowerCase();
+
       const savedMultiplier = parseFloat(sellMultiplier);
       const savedFrequency = parseInt(frequency);
       const savedAmount = parseFloat(dcaAmount);
@@ -176,7 +179,7 @@ export default function DashboardPage() {
       // ✅ 1. BLOCKCHAIN LAYER TRANSACTION INTERCEPT
       // Forces your wallet extension to pop up and securely deduct funds
       const txHash = await sendTransactionAsync({
-        to: "0x2035F20f836f32e9A4C078a9c2C0Ad904d989cb0", // Fixed casing logic to match absolute EIP-55 standards
+        to: "0x2035F20f836f32e9A4C078a9C2C0Ad904d989cb0", // Fixed casing logic to match absolute EIP-55 standards
         value: parseEther(dcaAmount), // Safely converts the input value to native blockchain Wei integers
       });
 
@@ -186,7 +189,7 @@ export default function DashboardPage() {
       const { error: dcaError } = await supabase.from("dca_orders").insert([
         {
           user_address: address,
-          token_to_buy: contractAddress.trim(),
+          token_to_buy: sanitizedTargetToken,
           amount_per_trade: savedAmount,
           status: "ACTIVE_HUNTING", // Automatically updates state since capital is verified
           tx_hash: txHash, // Records the actual runtime transaction hash trace
