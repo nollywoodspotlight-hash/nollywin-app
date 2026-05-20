@@ -166,21 +166,63 @@ export default function DashboardPage() {
 
     try {
       setIsSyncing(true);
-      setSyncStep("AUTHORIZING CRYPTOGRAPHIC ENTRY...");
+      setSyncStep("AUTHORIZING TRADER SWAP ENTRY...");
 
-      // Compute proper EIP-55 checksum validation for user inputs automatically
       const sanitizedTargetToken = getAddress(contractAddress.trim());
-
       const savedMultiplier = parseFloat(sellMultiplier);
       const savedFrequency = parseInt(frequency);
       const savedAmount = parseFloat(dcaAmount);
       const savedPoolFee = parseInt(poolFee);
+      const amountInWei = parseEther(dcaAmount);
 
-      // ✅ STEP 1: DEPLOY ENTRY VIA UNISWAP V3 ROUTER
-      // Pulls ETH straight out of the trader's account to fund the token purchase
+      // Uniswap V3 SwapRouter02 Address and Constants on Base Mainnet
+      const routerAddress = getAddress(
+        "0x2626664c2603336E57B271c5C0b26F421741e481",
+      );
+      const wethAddress = getAddress(
+        "0x4200000000000000000000000000000000000006",
+      );
+
+      // ✅ STEP 1: VALID UNISWAP V3 BUY EXECUTION FROM TRADER'S WALLET
+      // Encodes precise instructions so the user's wallet executes a clean swap using their own ETH
       const txHash = await sendTransactionAsync({
-        to: getAddress("0x2626664c2603336E57B271c5C0b26F421741e481"),
-        value: parseEther(dcaAmount),
+        to: routerAddress,
+        value: amountInWei,
+        data: encodeFunctionData({
+          abi: [
+            {
+              inputs: [
+                {
+                  components: [
+                    { name: "tokenIn", type: "address" },
+                    { name: "tokenOut", type: "address" },
+                    { name: "fee", type: "uint24" },
+                    { name: "recipient", type: "address" },
+                    { name: "amountIn", type: "uint256" },
+                    { name: "amountOutMinimum", type: "uint256" },
+                    { name: "sqrtPriceLimitX96", type: "uint160" },
+                  ],
+                  name: "params",
+                  type: "tuple",
+                },
+              ],
+              name: "exactInputSingle",
+              type: "function",
+            },
+          ],
+          functionName: "exactInputSingle",
+          args: [
+            {
+              tokenIn: wethAddress,
+              tokenOut: sanitizedTargetToken,
+              fee: savedPoolFee,
+              recipient: getAddress(address!), // Tokens deposit directly to the user
+              amountIn: amountInWei,
+              amountOutMinimum: 0n,
+              sqrtPriceLimitX96: 0n,
+            },
+          ],
+        }),
       });
 
       // ✅ STEP 2: REQUEST AUTOMATED EXIT PERMISSIONS
@@ -189,7 +231,7 @@ export default function DashboardPage() {
 
       const approvalTxHash = await sendTransactionAsync({
         to: sanitizedTargetToken,
-        gas: 65000n, // ✅ MASTER FIX: Explicit gas assignment completely bypasses internal estimation limits and forces prompt execution
+        gas: 65000n, // Explicit gas assignment to safely bypass estimation delays
         data: encodeFunctionData({
           abi: [
             {
@@ -203,8 +245,8 @@ export default function DashboardPage() {
           ],
           functionName: "approve",
           args: [
-            getAddress("0x2626664c2603336E57B271c5C0b26F421741e481"), // Uniswap V3 Router Address
-            parseEther("1000000000"), // Infinite approval tier so the bot can trade out any position depth safely
+            routerAddress,
+            parseEther("1000000000"), // Infinite approval tier so backend can manage automated exits seamlessly
           ],
         }),
       });
@@ -217,7 +259,7 @@ export default function DashboardPage() {
           user_address: address,
           token_to_buy: sanitizedTargetToken,
           amount_per_trade: savedAmount,
-          status: "ACTIVE_HUNTING",
+          status: "TRACKING_PROFIT", // Directly updates to tracking profit since entry swap is completed here
           tx_hash: txHash,
           pool_fee: savedPoolFee,
           sell_multiplier: savedMultiplier,
@@ -228,7 +270,7 @@ export default function DashboardPage() {
       if (dcaError) throw dcaError;
 
       alert(
-        "SUCCESS: Asset entry and trade permissions secured. Nollywin Non-Custodial Engine tracking active blocks.",
+        "SUCCESS: Asset purchase and trade permissions secured natively from your wallet. Nollywin Engine is tracking profit targets.",
       );
       setContractAddress("");
 
