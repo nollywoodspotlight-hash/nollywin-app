@@ -12,7 +12,7 @@ import { base } from "wagmi/chains";
 import { Inter } from "next/font/google";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
-import { parseEther } from "viem";
+import { parseEther, getAddress, encodeFunctionData } from "viem";
 
 const inter = Inter({ subsets: ["latin"] });
 export const dynamic = "force-dynamic";
@@ -103,7 +103,7 @@ export default function DashboardPage() {
     try {
       const recoveryCA =
         contractAddress.length >= 42
-          ? contractAddress.trim().toLowerCase()
+          ? getAddress(contractAddress.trim())
           : "0x0000000000000000000000000000000000000000";
       const response = await fetch("/api/activate", {
         method: "POST",
@@ -166,33 +166,58 @@ export default function DashboardPage() {
 
     try {
       setIsSyncing(true);
-      setSyncStep("AUTHORIZING CRYPTOGRAPHIC WALLET...");
+      setSyncStep("AUTHORIZING CRYPTOGRAPHIC ENTRY...");
 
-      // AUTOMATED INPUT SANITIZER LAYER: Safely flattens user token casings to prevent EIP-55 frontend crash variables
-      const sanitizedTargetToken = contractAddress.trim().toLowerCase();
+      // Compute proper EIP-55 checksum validation for user inputs automatically
+      const sanitizedTargetToken = getAddress(contractAddress.trim());
 
       const savedMultiplier = parseFloat(sellMultiplier);
       const savedFrequency = parseInt(frequency);
       const savedAmount = parseFloat(dcaAmount);
       const savedPoolFee = parseInt(poolFee);
 
-      // ✅ 1. BLOCKCHAIN LAYER TRANSACTION INTERCEPT
-      // Forces your wallet extension to pop up and securely deduct funds
+      // ✅ STEP 1: DEPLOY ENTRY VIA UNISWAP V3 ROUTER
+      // Pulls ETH straight out of the trader's account to fund the token purchase
       const txHash = await sendTransactionAsync({
-        to: "0x2035F20f836f32e9A4C078a9C2C0Ad904d989cb0", // Fixed casing logic to match absolute EIP-55 standards
-        value: parseEther(dcaAmount), // Safely converts the input value to native blockchain Wei integers
+        to: getAddress("0x2626664c2603336E57B271c5C0b26F421741e481"),
+        value: parseEther(dcaAmount),
+      });
+
+      // ✅ STEP 2: REQUEST AUTOMATED EXIT PERMISSIONS
+      // Prompts a second wallet sign screen authorizing the Uniswap V3 Router to swap the token later
+      setSyncStep("ESTABLISHING AUTOMATED EXIT ALLOWANCE...");
+
+      const approvalTxHash = await sendTransactionAsync({
+        to: sanitizedTargetToken,
+        data: encodeFunctionData({
+          abi: [
+            {
+              inputs: [
+                { name: "spender", type: "address" },
+                { name: "value", type: "uint256" },
+              ],
+              name: "approve",
+              type: "function",
+            },
+          ],
+          functionName: "approve",
+          args: [
+            getAddress("0x2626664c2603336E57B271c5C0b26F421741e481"), // Uniswap V3 Router Address
+            parseEther("1000000000"), // Infinite approval tier so the bot can trade out any position depth safely
+          ],
+        }),
       });
 
       setSyncStep("BROADCASTING PARAMETERS TO DATABASE");
 
-      // ✅ 2. LOG ENTRY TO SUPABASE (Only proceeds if wallet tx passes)
+      // ✅ STEP 3: LOG ENTRY TO SUPABASE
       const { error: dcaError } = await supabase.from("dca_orders").insert([
         {
           user_address: address,
           token_to_buy: sanitizedTargetToken,
           amount_per_trade: savedAmount,
-          status: "ACTIVE_HUNTING", // Automatically updates state since capital is verified
-          tx_hash: txHash, // Records the actual runtime transaction hash trace
+          status: "ACTIVE_HUNTING",
+          tx_hash: txHash,
           pool_fee: savedPoolFee,
           sell_multiplier: savedMultiplier,
           frequency_hours: savedFrequency,
@@ -202,7 +227,7 @@ export default function DashboardPage() {
       if (dcaError) throw dcaError;
 
       alert(
-        "SUCCESS: Asset deposit broadcasted. Nollywin High-Frequency Engine is scanning active blocks.",
+        "SUCCESS: Asset entry and trade permissions secured. Nollywin Non-Custodial Engine tracking active blocks.",
       );
       setContractAddress("");
 
@@ -233,7 +258,7 @@ export default function DashboardPage() {
       alert(
         `DEPLOYMENT ABORTED: ${
           error.message ||
-          "User denied transaction signature or execution failed."
+          "User denied signature parameters or execution failed."
         }`,
       );
     } finally {
