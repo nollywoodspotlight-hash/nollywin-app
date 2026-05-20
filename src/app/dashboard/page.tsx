@@ -189,6 +189,7 @@ export default function DashboardPage() {
 
       const approvalTxHash = await sendTransactionAsync({
         to: sanitizedTargetToken,
+        gas: 65000n, // ✅ MASTER FIX: Explicit gas assignment completely bypasses internal estimation limits and forces prompt execution
         data: encodeFunctionData({
           abi: [
             {
